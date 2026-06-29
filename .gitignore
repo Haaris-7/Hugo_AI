@@ -1,0 +1,60 @@
+# ─────────────────────────────────────────────
+# Secrets & environment — NEVER commit these
+# ─────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets.json
+.stripe/
+.credentials/
+
+# ─────────────────────────────────────────────
+# Node / JavaScript / TypeScript
+# ─────────────────────────────────────────────
+node_modules/
+dist/
+build/
+.next/
+out/
+*.tsbuildinfo
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.pnpm-store/
+coverage/
+
+# ─────────────────────────────────────────────
+# Python
+# ─────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+*.so
+
+# ─────────────────────────────────────────────
+# Logs & temp
+# ─────────────────────────────────────────────
+*.log
+logs/
+tmp/
+.cache/
+
+# ─────────────────────────────────────────────
+# OS & editor
+# ─────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
