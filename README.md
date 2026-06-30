@@ -25,11 +25,19 @@ through the policy-enforced FastAPI broker.
 
 ## Setup
 
-Install Docker, then run:
+**Before cloning:** ask the user where they want to install the project. Do not assume a
+default directory — confirm the desired file path first.
+
+Install Docker and ensure Docker Desktop is running, then:
 
 ```bash
+cd <user-chosen-directory>
+git clone https://github.com/Haaris-7/Argo-AI.git
+cd Argo-AI
 ./setup.sh
 ```
+
+If a previous install failed, run `./setup.sh --clean` first to wipe stale volumes.
 
 The script creates local service tokens, starts PostgreSQL, the API, the autonomous worker, and
 the Next.js cockpit, then opens [the setup wizard](http://localhost:3000/setup).
@@ -99,6 +107,7 @@ deployments use real signature verification with your configured webhook secret.
 | `./setup.sh` | Build, start, and open setup |
 | `./setup.sh --restart` | Rebuild and restart |
 | `./setup.sh --stop` | Stop the stack |
+| `./setup.sh --clean` | Stop and wipe database volumes |
 | `make test` | Run backend tests |
 | `make lint` | Run static checks |
 
