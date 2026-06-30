@@ -43,6 +43,7 @@ class Settings(BaseSettings):
     influencers_club_api_key: str = ""
 
     demo_mode: bool = False
+    demo_real_providers: str = ""
 
     hermes_base_url: str = "http://host.docker.internal:8642/v1"
     hermes_api_key: str = ""
@@ -83,6 +84,12 @@ class Settings(BaseSettings):
     def should_attempt_live(self, capability: str) -> bool:
         """Compatibility helper for providers; production has no simulated mode."""
         return self.capability_configured(capability)
+
+    def demo_use_real(self, capability: str) -> bool:
+        if not self.demo_mode:
+            return False
+        enabled = {s.strip() for s in self.demo_real_providers.split(",") if s.strip()}
+        return capability in enabled and self.capability_configured(capability)
 
     def capability_modes(self) -> dict[str, dict[str, object]]:
         states: dict[str, dict[str, object]] = {}

@@ -22,6 +22,7 @@ class Field:
 WIZARD_FIELDS: list[Field] = [
     Field("ARGO_HERMES_BASE_URL", "NemoClaw Hermes base URL", "http://host.docker.internal:8642/v1"),
     Field("ARGO_DEMO_MODE", "Seed demo campaigns", "false"),
+    Field("ARGO_DEMO_REAL_PROVIDERS", "Use real providers in demo", ""),
     Field("ARGO_HERMES_API_KEY", "Hermes API key", secret=True),
     Field("ARGO_NVIDIA_API_KEY", "NVIDIA NIM API key", secret=True),
     Field("ARGO_NVIDIA_VISION_MODEL", "NIM vision model", "nvidia/nemotron-nano-12b-v2-vl"),

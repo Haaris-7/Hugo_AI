@@ -101,10 +101,18 @@ const GROUPS: Array<{ title: string; hint: string; fields: FieldDef[]; links: He
   },
 ];
 
+const DEMO_REAL_OPTIONS: Array<{ capability: string; label: string }> = [
+  { capability: "hermes", label: "Hermes / NemoClaw (strategy, negotiation)" },
+  { capability: "vision", label: "NVIDIA Vision (content QA)" },
+  { capability: "stripe", label: "Stripe (funding, payouts)" },
+  { capability: "gmail", label: "Gmail (creator outreach)" },
+];
+
 export default function SetupPage() {
   const [summary, setSummary] = useState<SetupSummary | null>(null);
   const [values, setValues] = useState<Record<string, string>>({});
   const [demoMode, setDemoMode] = useState(false);
+  const [demoReal, setDemoReal] = useState<Set<string>>(new Set());
   const [test, setTest] = useState<TestResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -114,6 +122,8 @@ export default function SetupPage() {
     api<SetupSummary>("/v1/system/setup").then((data) => {
       setSummary(data);
       setDemoMode(Boolean(data.demo_mode));
+      const raw = data.config["ARGO_DEMO_REAL_PROVIDERS"] ?? "";
+      setDemoReal(new Set(raw.split(",").map((s: string) => s.trim()).filter(Boolean)));
       setValues(Object.fromEntries(
         Object.entries(data.config).filter(([, value]) => value && !value.includes("…") && value !== "set"),
       ));
@@ -123,6 +133,7 @@ export default function SetupPage() {
   async function save() {
     const updates = Object.fromEntries(Object.entries(values).filter(([, value]) => value !== ""));
     updates.ARGO_DEMO_MODE = demoMode ? "true" : "false";
+    updates.ARGO_DEMO_REAL_PROVIDERS = [...demoReal].join(",");
     const result = await api<SetupSummary>("/v1/system/setup", {
       method: "POST",
       body: JSON.stringify({ updates }),
@@ -184,6 +195,40 @@ export default function SetupPage() {
             />
           </label>
         </div>
+        {demoMode && (() => {
+          const configured = DEMO_REAL_OPTIONS.filter(
+            (opt) => summary?.capabilities[opt.capability]?.credentials_present,
+          );
+          return configured.length > 0 ? (
+            <div className="mt-5 border-t border-[#dce4e3] pt-4">
+              <p className="text-sm font-medium">Use real services in demo</p>
+              <p className="mt-1 max-w-[56ch] text-xs leading-4 text-[#526360]">
+                You have API keys configured for these services. Check the ones you want to use live instead of simulated responses.
+              </p>
+              <div className="mt-3 grid gap-2">
+                {configured.map((opt) => (
+                  <label key={opt.capability} className="inline-flex cursor-pointer items-center gap-3 text-sm">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 accent-[#019393]"
+                      checked={demoReal.has(opt.capability)}
+                      onChange={(event) => {
+                        setDemoReal((prev) => {
+                          const next = new Set(prev);
+                          if (event.target.checked) next.add(opt.capability);
+                          else next.delete(opt.capability);
+                          return next;
+                        });
+                        setSaved(false);
+                      }}
+                    />
+                    <span>{opt.label}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          ) : null;
+        })()}
       </section>
 
       <div className="mt-7 flex flex-wrap gap-2">

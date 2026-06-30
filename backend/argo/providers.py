@@ -864,13 +864,16 @@ class DemoMailProvider(MailProvider):
 
 def build_providers(settings: Settings) -> Providers:
     if settings.demo_mode:
-        hermes = DemoHermesProvider(settings)
+        use_real = settings.demo_use_real
+        hermes = HermesProvider(settings) if use_real("hermes") else DemoHermesProvider(settings)
         return Providers(
             hermes=hermes,
             discovery=DiscoveryProvider(hermes),
-            vision=DemoVisionProvider(settings),
-            payments=DemoPaymentProvider(settings),
-            mail=DemoMailProvider(settings),
+            vision=VisionProvider(settings) if use_real("vision") else DemoVisionProvider(settings),
+            payments=(
+                PaymentProvider(settings) if use_real("stripe") else DemoPaymentProvider(settings)
+            ),
+            mail=MailProvider(settings) if use_real("gmail") else DemoMailProvider(settings),
             metrics=MetricsProvider(settings),
             telegram=TelegramProvider(settings),
         )
