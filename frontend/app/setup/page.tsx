@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { CheckCircle2, CircleAlert, LoaderCircle, ShieldCheck } from "lucide-react";
+import { ArrowLeft, CheckCircle2, CircleAlert, ExternalLink, LoaderCircle, ShieldCheck } from "lucide-react";
 import { api } from "@/lib/api";
 import { apiErrorMessage, titleCase } from "@/lib/utils";
 
@@ -25,13 +25,17 @@ type TestResult = {
 };
 
 type FieldDef = { key: string; label: string; secret?: boolean; optional?: boolean };
-const GROUPS: Array<{ title: string; hint: string; fields: FieldDef[] }> = [
+type HelpLink = { label: string; href: string };
+const GROUPS: Array<{ title: string; hint: string; fields: FieldDef[]; links: HelpLink[] }> = [
   {
     title: "Hermes · NemoClaw",
     hint: "Strategy, negotiation, learning, and agent-managed creator discovery.",
     fields: [
       { key: "ARGO_HERMES_BASE_URL", label: "NemoClaw base URL" },
       { key: "ARGO_HERMES_API_KEY", label: "Hermes API key", secret: true },
+    ],
+    links: [
+      { label: "NemoClaw Hermes setup", href: "https://docs.nvidia.com/nemoclaw/latest/get-started/quickstart-hermes.html" },
     ],
   },
   {
@@ -41,6 +45,9 @@ const GROUPS: Array<{ title: string; hint: string; fields: FieldDef[] }> = [
       { key: "ARGO_NVIDIA_API_KEY", label: "NVIDIA API key", secret: true },
       { key: "ARGO_NVIDIA_VISION_MODEL", label: "Vision model" },
     ],
+    links: [
+      { label: "Create an NVIDIA API key", href: "https://build.nvidia.com/settings/api-keys" },
+    ],
   },
   {
     title: "Stripe",
@@ -48,6 +55,10 @@ const GROUPS: Array<{ title: string; hint: string; fields: FieldDef[] }> = [
     fields: [
       { key: "ARGO_STRIPE_SECRET_KEY", label: "Stripe secret key", secret: true },
       { key: "ARGO_STRIPE_WEBHOOK_SECRET", label: "Webhook signing secret", secret: true },
+    ],
+    links: [
+      { label: "Stripe API keys", href: "https://docs.stripe.com/keys" },
+      { label: "Webhook signing secrets", href: "https://docs.stripe.com/webhooks/signature" },
     ],
   },
   {
@@ -60,13 +71,32 @@ const GROUPS: Array<{ title: string; hint: string; fields: FieldDef[] }> = [
       { key: "ARGO_GMAIL_REFRESH_TOKEN", label: "Google OAuth refresh token", secret: true },
       { key: "ARGO_GMAIL_ACCESS_TOKEN", label: "Temporary access token", secret: true, optional: true },
     ],
+    links: [
+      { label: "Create Google OAuth credentials", href: "https://console.cloud.google.com/apis/credentials" },
+      { label: "Configure Gmail server authorization", href: "https://developers.google.com/workspace/gmail/api/auth/web-server" },
+    ],
+  },
+  {
+    title: "Creator discovery",
+    hint: "Choose how Hugo finds creators. Influencers.club provides reliable verified emails. Hermes agents use web research but may struggle to find email addresses.",
+    fields: [
+      { key: "ARGO_DISCOVERY_MODE", label: "Discovery method" },
+      { key: "ARGO_INFLUENCERS_CLUB_API_KEY", label: "Influencers.club API key", secret: true, optional: true },
+    ],
+    links: [
+      { label: "Influencers.club API access", href: "https://influencers.club" },
+    ],
   },
   {
     title: "Optional reporting",
-    hint: "YouTube metrics and Telegram operator approvals can be connected later.",
+    hint: "YouTube metrics and Telegram operator approvals can be connected later. Create Telegram bots through the official @BotFather account.",
     fields: [
       { key: "ARGO_YOUTUBE_API_KEY", label: "YouTube Data API key", secret: true, optional: true },
       { key: "ARGO_TELEGRAM_BOT_TOKEN", label: "Telegram bot token", secret: true, optional: true },
+    ],
+    links: [
+      { label: "YouTube API credentials", href: "https://developers.google.com/youtube/registering_an_application" },
+      { label: "Create a Telegram bot token", href: "https://core.telegram.org/bots/tutorial#obtain-your-bot-token" },
     ],
   },
 ];
@@ -121,10 +151,15 @@ export default function SetupPage() {
   return (
     <main className="mx-auto max-w-4xl px-5 py-10 sm:px-8 sm:py-14">
       <div className="border-b border-[#dce4e3] pb-7">
-        <p className="text-sm font-semibold text-[#006e6e]">Hugo setup</p>
+        <div className="mb-4 flex items-center justify-between gap-4">
+          <p className="text-sm font-semibold text-[#006e6e]">Hugo setup</p>
+          <Link href="/system" className="inline-flex min-h-11 items-center gap-2 rounded-[6px] px-3 text-sm font-semibold text-[#354542] hover:bg-[#eef2f2] hover:text-[#10211f]">
+            <ArrowLeft className="h-4 w-4" aria-hidden /> Back to system
+          </Link>
+        </div>
         <h1 className="display-face mt-1 text-[32px] leading-tight">Connect the live runtime</h1>
         <p className="mt-3 max-w-[70ch] text-[15px] leading-6 text-[#526360]">
-          Hugo runs only on connected services. Creator discovery is provisioned and managed by Hermes through the influencers.club agent integration, so it has no setup field here.
+          Hugo runs only on connected services. Configure each integration below, then choose how creator discovery works — via influencers.club API or Hermes agent web research.
         </p>
       </div>
 
@@ -155,7 +190,7 @@ export default function SetupPage() {
         {summary && Object.entries(summary.capabilities).map(([name, capability]) => (
           <span key={name} className="inline-flex min-h-8 items-center gap-1.5 rounded-[6px] border border-[#dce4e3] bg-white px-2.5 text-xs font-semibold">
             {capability.resolved === "missing" ? <CircleAlert className="h-3.5 w-3.5 text-[#986200]" /> : <CheckCircle2 className="h-3.5 w-3.5 text-[#167a5b]" />}
-            {titleCase(name)} · {capability.resolved === "agent_managed" ? "Hermes managed" : capability.resolved}
+            {titleCase(name)} · {capability.resolved === "agent_managed" ? "Hermes agents" : capability.resolved}
           </span>
         ))}
       </div>
@@ -163,10 +198,32 @@ export default function SetupPage() {
       {GROUPS.map((group) => (
         <section key={group.title} className="mt-9 border-t border-[#dce4e3] pt-6 first:border-t-0">
           <div className="grid gap-5 md:grid-cols-[240px_1fr]">
-            <div><h2 className="text-[17px] font-semibold">{group.title}</h2><p className="mt-1 text-sm leading-5 text-[#526360]">{group.hint}</p></div>
+            <div>
+              <h2 className="text-[17px] font-semibold">{group.title}</h2>
+              <p className="mt-1 text-sm leading-5 text-[#526360]">{group.hint}</p>
+              <div className="mt-3 flex flex-col items-start gap-1">
+                {group.links.map((link) => (
+                  <a key={link.href} href={link.href} target="_blank" rel="noreferrer" className="inline-flex min-h-8 items-center gap-1.5 text-xs font-semibold text-[#006e6e] hover:text-[#004e4e] hover:underline">
+                    {link.label}<ExternalLink className="h-3 w-3" aria-hidden />
+                  </a>
+                ))}
+              </div>
+            </div>
             <div className="grid gap-4">
               {group.fields.map((field) => {
                 const configured = Boolean(summary?.config[field.key]);
+                if (field.key === "ARGO_DISCOVERY_MODE") {
+                  return <label key={field.key} className="grid gap-1.5">
+                    <span className="text-sm font-medium">{field.label}</span>
+                    <select className="h-11 rounded-[6px] border border-[#c5d1d0] bg-white px-3 outline-none focus:border-[#019393]" value={values[field.key] ?? "hermes_agents"} onChange={(event) => { setValues((current) => ({ ...current, [field.key]: event.target.value })); setSaved(false); }}>
+                      <option value="hermes_agents">Hermes agents (web research)</option>
+                      <option value="influencers_club">Influencers.club API</option>
+                    </select>
+                  </label>;
+                }
+                if (field.key === "ARGO_INFLUENCERS_CLUB_API_KEY" && (values["ARGO_DISCOVERY_MODE"] ?? "hermes_agents") !== "influencers_club") {
+                  return null;
+                }
                 return <label key={field.key} className="grid gap-1.5">
                   <span className="flex items-center justify-between text-sm font-medium"><span>{field.label}{field.optional && <span className="ml-1 font-normal text-[#687975]">optional</span>}</span>{configured && <span className="text-xs font-normal text-[#167a5b]">Configured</span>}</span>
                   <input className="h-11 rounded-[6px] border border-[#c5d1d0] bg-white px-3 outline-none focus:border-[#019393]" type={field.secret ? "password" : "text"} value={values[field.key] ?? ""} placeholder={configured && field.secret ? "•••• already stored" : ""} onChange={(event) => { setValues((current) => ({ ...current, [field.key]: event.target.value })); setSaved(false); }} />

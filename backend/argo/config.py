@@ -3,8 +3,6 @@ from typing import Literal
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-# Discovery is intentionally not credentialed here. Hermes owns the
-# influencers.club integration and provisions/uses it through its tool runtime.
 CAPABILITY_KEYS: dict[str, tuple[str, ...]] = {
     "hermes": ("hermes_api_key",),
     "vision": ("nvidia_api_key",),
@@ -12,6 +10,7 @@ CAPABILITY_KEYS: dict[str, tuple[str, ...]] = {
     "gmail": ("gmail_sender",),
     "youtube": ("youtube_api_key",),
     "telegram": ("telegram_bot_token",),
+    "discovery": ("influencers_club_api_key",),
 }
 
 CAPABILITY_ENV: dict[str, str] = {
@@ -21,6 +20,7 @@ CAPABILITY_ENV: dict[str, str] = {
     "gmail": "ARGO_GMAIL_ACCESS_TOKEN and ARGO_GMAIL_SENDER",
     "youtube": "ARGO_YOUTUBE_API_KEY",
     "telegram": "ARGO_TELEGRAM_BOT_TOKEN",
+    "discovery": "ARGO_INFLUENCERS_CLUB_API_KEY",
 }
 
 REQUIRED_CAPABILITIES = ("hermes", "vision", "stripe", "gmail")
@@ -39,6 +39,8 @@ class Settings(BaseSettings):
     automation_poll_seconds: int = 30
     gmail_lookback_days: int = 30
     discovery_refill_cents: int = 100
+    discovery_mode: Literal["influencers_club", "hermes_agents"] = "hermes_agents"
+    influencers_club_api_key: str = ""
 
     demo_mode: bool = False
 
@@ -83,20 +85,31 @@ class Settings(BaseSettings):
         return self.capability_configured(capability)
 
     def capability_modes(self) -> dict[str, dict[str, object]]:
-        states = {
-            capability: {
+        states: dict[str, dict[str, object]] = {}
+        for capability in CAPABILITY_KEYS:
+            if capability == "discovery":
+                if self.discovery_mode == "influencers_club":
+                    configured = self.capability_configured("discovery")
+                    states["discovery"] = {
+                        "resolved": "ready" if configured else "missing",
+                        "credentials_present": configured,
+                        "required": True,
+                        "mode": "influencers_club",
+                    }
+                else:
+                    states["discovery"] = {
+                        "resolved": "agent_managed",
+                        "credentials_present": True,
+                        "required": True,
+                        "mode": "hermes_agents",
+                        "managed_by": "Hermes",
+                    }
+                continue
+            states[capability] = {
                 "resolved": "ready" if self.capability_configured(capability) else "missing",
                 "credentials_present": self.capability_configured(capability),
                 "required": capability in REQUIRED_CAPABILITIES,
             }
-            for capability in CAPABILITY_KEYS
-        }
-        states["discovery"] = {
-            "resolved": "agent_managed",
-            "credentials_present": True,
-            "required": True,
-            "managed_by": "Hermes",
-        }
         return states
 
     def validate_runtime(self) -> None:

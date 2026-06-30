@@ -178,9 +178,16 @@ class HermesProvider:
             candidates = [DiscoveryCandidate.model_validate(row) for row in rows]
             return [row for row in candidates if row.email and row.handle not in exclude_handles]
 
+        api_key_context = ""
+        if self.settings.influencers_club_api_key:
+            api_key_context = (
+                f"Use this influencers.club API key: {self.settings.influencers_club_api_key}. "
+            )
+
         primary_prompt = (
             "Use the influencers.club agent tools to "
-            "provision or reuse API access, check credits, discover candidates, "
+            + api_key_context
+            + "provision or reuse API access, check credits, discover candidates, "
             "and enrich the selected handles for verified email addresses. "
             "Manage any supported credit refill through the approved Stripe agent "
             "payment flow. Never invent a creator or contact detail. "
@@ -195,13 +202,16 @@ class HermesProvider:
             + json_schema
         )
 
+        use_influencers_club = self.settings.discovery_mode == "influencers_club"
+
         candidates: list[DiscoveryCandidate] = []
-        try:
-            candidates = _parse_candidates(
-                self._chat([{"role": "user", "content": primary_prompt}])
-            )
-        except Exception:
-            candidates = []
+        if use_influencers_club:
+            try:
+                candidates = _parse_candidates(
+                    self._chat([{"role": "user", "content": primary_prompt}])
+                )
+            except Exception:
+                candidates = []
 
         if not candidates:
             candidates = _parse_candidates(
@@ -822,7 +832,7 @@ class DemoPaymentProvider(PaymentProvider):
     def create_onboarding_link(self, creator_id: str, email: str | None) -> tuple[str, str, bool]:
         return (
             f"acct_demo_{creator_id}",
-            f"http://localhost:3000/system?onboarding=demo",
+            "http://localhost:3000/system?onboarding=demo",
             True,
         )
 

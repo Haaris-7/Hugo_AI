@@ -32,6 +32,8 @@ WIZARD_FIELDS: list[Field] = [
     Field("ARGO_GMAIL_CLIENT_SECRET", "Google OAuth client secret", secret=True),
     Field("ARGO_GMAIL_REFRESH_TOKEN", "Google OAuth refresh token", secret=True),
     Field("ARGO_GMAIL_SENDER", "Gmail sender address"),
+    Field("ARGO_DISCOVERY_MODE", "Creator discovery method", "hermes_agents"),
+    Field("ARGO_INFLUENCERS_CLUB_API_KEY", "Influencers.club API key", secret=True),
     Field("ARGO_YOUTUBE_API_KEY", "YouTube Data API key", secret=True),
     Field("ARGO_TELEGRAM_BOT_TOKEN", "Telegram bot token", secret=True),
 ]
