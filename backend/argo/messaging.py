@@ -80,7 +80,7 @@ def confirm_telegram_pairing(db: Session, providers: Providers) -> dict[str, Any
     channel.pairing_nonce = None
     channel.pairing_expires_at = None
     db.commit()
-    providers.telegram.send(channel.chat_id, "Argo approvals are connected to this account.")
+    providers.telegram.send(channel.chat_id, "Hugo approvals are connected to this account.")
     return {
         "provider": "telegram",
         "enabled": True,
@@ -110,7 +110,7 @@ def _approval_text(db: Session, request: ApprovalRequest) -> str:
             else ""
         )
     return (
-        f"Argo approval · {request.resource_type.replace('_', ' ')}\n"
+        f"Hugo approval · {request.resource_type.replace('_', ' ')}\n"
         f"Campaign: {campaign.name if campaign else request.campaign_id}{detail}\n"
         f"Reply approve {request.token} or reject {request.token}."
     )

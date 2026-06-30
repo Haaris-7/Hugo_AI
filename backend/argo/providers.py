@@ -84,16 +84,20 @@ class HermesProvider:
 
     def healthy(self) -> bool:
         try:
-            base = self.settings.hermes_base_url.removesuffix("/v1")
-            return httpx.get(f"{base}/health", timeout=3).status_code == 200
-        except httpx.HTTPError:
+            return self.probe()["ok"]
+        except Exception:
             return False
+
+    def probe(self) -> dict[str, Any]:
+        base = self.settings.hermes_base_url.removesuffix("/v1")
+        response = httpx.get(f"{base}/health", timeout=5)
+        return {"ok": response.status_code == 200, "status_code": response.status_code}
 
     def strategy(self, context: dict[str, Any]) -> HermesStrategy:
         prompt = {
             "role": "user",
             "content": (
-                "/argo-strategy-engine Return JSON only with creator_tier (nano|micro|mid), "
+                "Return JSON only with creator_tier (nano|micro|mid), "
                 "target_rate_cents, rationale, projected_cost_per_result, and "
                 "compensation_components. Context: " + json.dumps(context)
             ),
@@ -106,7 +110,7 @@ class HermesProvider:
                 {
                     "role": "user",
                     "content": (
-                        f"/argo-platform-intelligence Research current {platform} ranking signals. "
+                        f"Research current {platform} ranking signals. "
                         "Return JSON only with platform, signals, sources, and confidence."
                     ),
                 }
@@ -118,9 +122,8 @@ class HermesProvider:
         prompt = {
             "role": "user",
             "content": (
-                "/argo-performance-learning Analyze this closed campaign. Use memory and "
-                "skill_manage to update only argo-* skills. Load NVIDIA skill-card-generator and "
-                "return JSON only with summary, change_type (patch|no_op), heuristic, "
+                "Analyze this closed campaign. Return JSON only with summary, change_type "
+                "(patch|no_op), heuristic, "
                 "no_op_reason, skill_name, evidence_ids, and governance. Dossier: "
                 + json.dumps(dossier)
             ),
@@ -131,7 +134,7 @@ class HermesProvider:
         prompt = {
             "role": "user",
             "content": (
-                "/argo-outreach-negotiation Draft the complete creator deal email. Include the "
+                "Draft the complete creator deal email. Include the "
                 "deliverable, compensation, usage expectations, two-stage QA, disclosure and "
                 "tracking requirements. Tell the creator to reply ACCEPT, propose a rate, or "
                 "decline. Do not include or mention a web portal. Context: " + json.dumps(context)
@@ -148,7 +151,7 @@ class HermesProvider:
                 {
                     "role": "user",
                     "content": (
-                        "/argo-outreach-negotiation Evaluate this creator reply without "
+                        "Evaluate this creator reply without "
                         "exceeding the campaign cap. Return JSON only with intent "
                         "(accept|counter|decline), response, "
                         "and agreed_rate_cents. Keep the entire workflow in email. Context: "
@@ -176,7 +179,7 @@ class HermesProvider:
             return [row for row in candidates if row.email and row.handle not in exclude_handles]
 
         primary_prompt = (
-            "/argo-creator-discovery Use the influencers.club agent tools to "
+            "Use the influencers.club agent tools to "
             "provision or reuse API access, check credits, discover candidates, "
             "and enrich the selected handles for verified email addresses. "
             "Manage any supported credit refill through the approved Stripe agent "
@@ -184,7 +187,7 @@ class HermesProvider:
             + json_schema
         )
         research_prompt = (
-            "/argo-creator-discovery Research real creators on "
+            "Research real creators on "
             f"{platform!r} in the {niche!r} niche using your web research and "
             "platform search skills. Find creators with verified public contact "
             "information (email in bio, linktree, or business email). "
@@ -320,6 +323,27 @@ class VisionProvider:
             model=self.settings.nvidia_vision_model,
         )
 
+    def probe(self) -> dict[str, Any]:
+        if not self.settings.capability_configured("vision"):
+            raise RuntimeError("NVIDIA NIM is not configured")
+        response = httpx.post(
+            f"{self.settings.nvidia_vision_base_url.rstrip('/')}/chat/completions",
+            headers={"Authorization": f"Bearer {self.settings.nvidia_api_key}"},
+            json={
+                "model": self.settings.nvidia_vision_model,
+                "messages": [{"role": "user", "content": "Reply with OK"}],
+                "max_tokens": 4,
+                "temperature": 0,
+            },
+            timeout=5,
+        )
+        response.raise_for_status()
+        return {
+            "ok": True,
+            "model": self.settings.nvidia_vision_model,
+            "status_code": response.status_code,
+        }
+
 
 class PaymentProvider:
     def __init__(self, settings: Settings):
@@ -339,7 +363,7 @@ class PaymentProvider:
                         "price_data": {
                             "currency": "usd",
                             "unit_amount": amount_cents,
-                            "product_data": {"name": f"Argo campaign {campaign_id}"},
+                            "product_data": {"name": f"Hugo campaign {campaign_id}"},
                         },
                         "quantity": 1,
                     }
@@ -416,6 +440,19 @@ class PaymentProvider:
             options={"idempotency_key": idempotency_key},
         )
         return TransferResult(external_id=transfer.id)
+
+    def probe(self) -> dict[str, Any]:
+        if not self.settings.capability_configured("stripe"):
+            raise RuntimeError("Stripe is not configured")
+        import stripe
+
+        stripe.api_key = self.settings.stripe_secret_key
+        account = stripe.Account.retrieve()
+        return {
+            "ok": True,
+            "account_id": account.id,
+            "country": getattr(account, "country", None),
+        }
 
 
 class MailProvider:
@@ -529,6 +566,20 @@ class MailProvider:
                         )
                     )
         return replies
+
+    def probe(self) -> dict[str, Any]:
+        response = httpx.get(
+            "https://gmail.googleapis.com/gmail/v1/users/me/profile",
+            headers=self._headers(),
+            timeout=5,
+        )
+        response.raise_for_status()
+        profile = response.json()
+        return {
+            "ok": True,
+            "email": profile.get("emailAddress"),
+            "messages_total": profile.get("messagesTotal"),
+        }
 
 
 class MetricsProvider:

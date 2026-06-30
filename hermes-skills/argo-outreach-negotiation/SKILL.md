@@ -1,9 +1,9 @@
 ---
 name: argo-outreach-negotiation
-description: Draft concise creator outreach and negotiate within explicit Argo campaign caps.
+description: Draft concise creator outreach and negotiate within explicit Hugo campaign caps.
 ---
 
-# Argo Outreach and Negotiation
+# Hugo Outreach and Negotiation
 
 ## Outreach
 Call `argo_request_outreach` with the deal ID and rate in cents. The backend drafts

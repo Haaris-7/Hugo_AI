@@ -71,5 +71,7 @@ frontend/test-results/
 # ─────────────────────────────────────────────
 *.sqlite3
 *.sqlite
+.env.tmp
+..env.tmp
 docker-compose.override.yml
 .impeccable/

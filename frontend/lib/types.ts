@@ -37,6 +37,7 @@ export type CampaignSummary = {
   metrics_recorded: boolean;
   created_at: string;
   updated_at: string;
+  is_demo?: boolean;
 };
 
 export type ActionItem = {

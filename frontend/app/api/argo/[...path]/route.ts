@@ -29,7 +29,7 @@ async function proxy(request: NextRequest, context: { params: Promise<{ path: st
     });
   } catch {
     return NextResponse.json(
-      { detail: "Argo API is unavailable. Check the backend service and retry." },
+      { detail: "Hugo API is unavailable. Check the backend service and retry." },
       { status: 503 },
     );
   }

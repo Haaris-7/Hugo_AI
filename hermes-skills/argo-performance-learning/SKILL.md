@@ -1,9 +1,9 @@
 ---
 name: argo-performance-learning
-description: Convert a closed Argo campaign's evidence into validated memory and procedural skill improvements.
+description: Convert a closed Hugo campaign's evidence into validated memory and procedural skill improvements.
 ---
 
-# Argo Performance Learning
+# Hugo Performance Learning
 
 1. Call `argo_begin_learning` with the run ID.
 2. Compare prediction, actual cost per result, revisions, negotiation, human overrides, and failures.

@@ -138,9 +138,11 @@ async def test_terminal_cancellation_runs_database_learning(client, api_headers)
 @pytest.mark.anyio
 async def test_removed_demo_routes_are_not_exposed(client, api_headers):
     assert (await client.post("/v1/demo/reset", json={}, headers=api_headers)).status_code == 404
-    assert (await client.post("/v1/demo/acceptance-run", json={}, headers=api_headers)).status_code == 404
+    assert (
+        await client.post("/v1/demo/acceptance-run", json={}, headers=api_headers)
+    ).status_code == 404
     system = (await client.get("/v1/system/status", headers=api_headers)).json()
-    assert "demo_mode" not in system
+    assert system["demo_mode"] is False
 
 
 @pytest.mark.anyio

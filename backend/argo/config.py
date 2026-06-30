@@ -40,7 +40,9 @@ class Settings(BaseSettings):
     gmail_lookback_days: int = 30
     discovery_refill_cents: int = 100
 
-    hermes_base_url: str = "http://127.0.0.1:8642/v1"
+    demo_mode: bool = False
+
+    hermes_base_url: str = "http://host.docker.internal:8642/v1"
     hermes_api_key: str = ""
     hermes_model: str = "nvidia/nemotron-3-ultra-550b-a55b"
     require_nemoclaw: bool = True

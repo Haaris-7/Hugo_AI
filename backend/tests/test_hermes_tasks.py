@@ -1,6 +1,11 @@
 """Tests for the Hermes durable task / lease system and agent action endpoints."""
 
+from datetime import timedelta
+
 import pytest
+from fastapi import HTTPException
+from sqlalchemy import select
+
 from argo.config import get_settings
 from argo.db import SessionLocal
 from argo.models import (
@@ -27,9 +32,6 @@ from argo.services import (
     mark_funded,
     retry_hermes_task,
 )
-from datetime import timedelta
-from fastapi import HTTPException
-from sqlalchemy import select
 
 
 def _active_campaign(db) -> Campaign:
@@ -261,7 +263,11 @@ async def test_agent_strategy_action(client, agent_headers):
 async def test_agent_funding_and_launch_actions(client, agent_headers):
     api = client
     h = {"Authorization": "Bearer test-api-token"}
-    brand = await api.post("/v1/brands", json={"name": "Launch brand", "niche": "beauty"}, headers=h)
+    brand = await api.post(
+        "/v1/brands",
+        json={"name": "Launch brand", "niche": "beauty"},
+        headers=h,
+    )
     campaign = await api.post(
         "/v1/campaigns",
         json={

@@ -18,8 +18,8 @@ restart:
 
 # Run backend tests.
 test:
-	docker compose exec api python -m pytest -q
+	docker compose run --rm dev python -m pytest -q
 
 # Run linter.
 lint:
-	docker compose exec api python -m ruff check backend hermes-plugin alembic
+	docker compose run --rm dev python -m ruff check backend hermes-plugin alembic

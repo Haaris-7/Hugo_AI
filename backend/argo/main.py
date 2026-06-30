@@ -65,7 +65,6 @@ from .services import (
     create_funding,
     decide_approval,
     discover,
-    enqueue_hermes_task,
     fail_hermes_task,
     generate_strategy,
     hermes_task_projection,
@@ -93,7 +92,7 @@ async def lifespan(_: FastAPI):
     yield
 
 
-app = FastAPI(title="Argo AI", version="0.1.0", lifespan=lifespan)
+app = FastAPI(title="Hugo", version="0.1.0", lifespan=lifespan)
 
 
 async def settings_dep() -> Settings:
@@ -135,6 +134,7 @@ def _campaign_summary(campaign: Campaign) -> dict:
         "metrics_recorded": campaign.metrics_recorded,
         "created_at": campaign.created_at.isoformat(),
         "updated_at": campaign.updated_at.isoformat(),
+        "is_demo": bool((campaign.negotiation_policy or {}).get("demo_seed")),
     }
 
 
@@ -507,6 +507,7 @@ async def system_status(
     hermes_healthy = providers.hermes.healthy()
     return {
         "environment": settings.env,
+        "demo_mode": settings.demo_mode,
         "capabilities": modes,
         "services": [
             {"name": "PostgreSQL", "status": "ok", "detail": "Authoritative state"},
@@ -572,18 +573,14 @@ async def live_probe(
     settings: Settings = Depends(settings_dep),
     providers: Providers = Depends(providers_dep),
 ) -> dict:
-    """Run an explicit live Nemotron health round-trip."""
+    """Run explicit live connectivity checks for each integration."""
     import time
 
-    hermes_resolved = settings.capability_modes()["hermes"]["resolved"]
-    result: dict = {
-        "hermes": {"resolved": hermes_resolved},
-        "vision": {
-            "resolved": settings.capability_modes()["vision"]["resolved"],
-            "model": settings.nvidia_vision_model,
-            "credentials_present": settings.capability_configured("vision"),
-        },
-    }
+    modes = settings.capability_modes()
+    result: dict[str, dict] = {}
+
+    hermes_resolved = modes["hermes"]["resolved"]
+    result["hermes"] = {"resolved": hermes_resolved}
     if hermes_resolved == "ready":
         start = time.perf_counter()
         try:
@@ -600,6 +597,33 @@ async def live_probe(
             result["hermes"].update({"ok": False, "error": str(exc)[:200]})
     else:
         result["hermes"]["note"] = "Hermes is not configured. Complete the setup wizard."
+
+    for capability in ("vision", "stripe", "gmail"):
+        entry = {
+            "resolved": modes[capability]["resolved"],
+            "credentials_present": modes[capability]["credentials_present"],
+        }
+        if capability == "vision":
+            entry["model"] = settings.nvidia_vision_model
+        if entry["resolved"] == "ready":
+            start = time.perf_counter()
+            try:
+                provider = {
+                    "vision": providers.vision,
+                    "stripe": providers.payments,
+                    "gmail": providers.mail,
+                }[capability]
+                probe_result = provider.probe()
+                entry.update(
+                    {
+                        "ok": True,
+                        "latency_ms": round((time.perf_counter() - start) * 1000),
+                        **probe_result,
+                    }
+                )
+            except Exception as exc:  # noqa: BLE001
+                entry.update({"ok": False, "error": str(exc)[:200]})
+        result[capability] = entry
     return result
 
 
@@ -639,8 +663,13 @@ async def system_setup_test(
             try:
                 if capability == "hermes":
                     entry["reachable"] = providers.hermes.healthy()
+                elif capability == "vision":
+                    entry["reachable"] = providers.vision.probe()["ok"]
+                elif capability == "stripe":
+                    entry["reachable"] = providers.payments.probe()["ok"]
+                elif capability == "gmail":
+                    entry["reachable"] = providers.mail.probe()["ok"]
                 else:
-                    # vision/stripe/gmail: credential presence is the cheap readiness signal
                     entry["reachable"] = info["credentials_present"]
             except Exception as exc:  # noqa: BLE001 - report, don't raise
                 entry["reachable"] = False
@@ -686,7 +715,6 @@ async def acceptance_proof(
     if not campaign:
         raise HTTPException(status_code=404, detail="No completed campaign is available")
     funding = db.scalar(select(FundingPayment).where(FundingPayment.campaign_id == campaign.id))
-    spends = db.scalars(select(ServiceSpend).where(ServiceSpend.campaign_id == campaign.id)).all()
     payouts = db.scalars(select(Payout).where(Payout.campaign_id == campaign.id)).all()
     learning = db.scalar(select(LearningRun).where(LearningRun.campaign_id == campaign.id))
     messages = db.scalars(
@@ -727,6 +755,7 @@ async def acceptance_proof(
                 "model": settings.hermes_model,
                 "api": settings.hermes_base_url,
                 "runtime_mode": settings.capability_modes()["hermes"]["resolved"],
+                "health_ok": providers.hermes.healthy(),
             },
         },
         {
@@ -750,6 +779,7 @@ async def acceptance_proof(
             "evidence": {
                 "payment_intent": funding.payment_intent_id if funding else None,
                 "source_charge": funding.source_charge_id if funding else None,
+                "checkout_session": funding.checkout_session_id if funding else None,
             },
         },
         {
@@ -770,21 +800,43 @@ async def acceptance_proof(
                 and any(message.direction == "inbound" for message in messages)
                 and any(message.direction == "outbound" for message in messages)
             ),
-            "evidence": {"deals": len(campaign.deals), "messages": len(messages)},
+            "evidence": {
+                "deals": len(campaign.deals),
+                "messages": len(messages),
+                "gmail_threads": sorted(
+                    {message.provider_thread_id for message in messages if message.provider_thread_id}
+                ),
+                "gmail_message_ids": [
+                    message.external_id for message in messages if message.external_id
+                ],
+            },
         },
         {
             "id": 6,
             "name": "NVIDIA NIM rejected and then approved content",
             "passed": any(not check.passed for check in qa_checks)
             and any(check.passed for check in qa_checks),
-            "evidence": [{"model": check.model, "passed": check.passed} for check in qa_checks],
+            "evidence": [
+                {
+                    "check_id": check.id,
+                    "model": check.model,
+                    "passed": check.passed,
+                    "findings": [finding.get("code") for finding in check.findings],
+                }
+                for check in qa_checks
+            ],
         },
         {
             "id": 7,
             "name": "Policy allowed one Stripe Connect transfer",
             "passed": sum(payout.status == "transferred" for payout in payouts) == 1,
             "evidence": [
-                {"transfer": payout.stripe_transfer_id, "status": payout.status}
+                {
+                    "payout_id": payout.id,
+                    "transfer": payout.stripe_transfer_id,
+                    "status": payout.status,
+                    "amount_cents": payout.amount_cents,
+                }
                 for payout in payouts
             ],
         },

@@ -78,7 +78,7 @@ async def test_complete_campaign_runs_automatic_learning(client, api_headers, ag
         },
         api_headers,
     )
-    outreach = await _post(
+    _outreach = await _post(
         client,
         f"/v1/deals/{deal['id']}/outreach",
         {"proposed_rate_cents": 15_000},
@@ -105,7 +105,11 @@ async def test_complete_campaign_runs_automatic_learning(client, api_headers, ag
     failed_qa = await _post(
         client,
         f"/v1/deals/{deal['id']}/deliverables",
-        {"caption": "Try the product", "media_url": "https://media.test/good.jpg", "stage": "draft"},
+        {
+            "caption": "Try the product",
+            "media_url": "https://media.test/good.jpg",
+            "stage": "draft",
+        },
         api_headers,
     )
     assert failed_qa["qa_status"] == "revision_required"

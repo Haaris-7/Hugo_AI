@@ -1,6 +1,6 @@
 ---
 name: argo-creator-discovery
-description: Provision and operate creator discovery for a live Argo campaign.
+description: Provision and operate creator discovery for a live Hugo campaign.
 ---
 
 # Creator discovery

@@ -425,7 +425,7 @@ def request_service_spend(db: Session, campaign: Campaign, settings: Settings) -
     if existing:
         return existing
     context = (
-        f"Argo campaign {campaign.id} requires creator discovery credits before it can search "
+        f"Hugo campaign {campaign.id} requires creator discovery credits before it can search "
         "for approved TikTok creators. This request is limited to the configured service budget."
     )
     spend = ServiceSpend(
@@ -2498,12 +2498,15 @@ def claim_hermes_tasks(db: Session, limit: int = 5) -> list[HermesTask]:
     if expired:
         db.flush()
 
-    tasks = db.scalars(
+    pending = (
         select(HermesTask)
         .where(HermesTask.status == "pending")
         .order_by(HermesTask.created_at)
         .limit(limit)
-    ).all()
+    )
+    if db.get_bind().dialect.name != "sqlite":
+        pending = pending.with_for_update(skip_locked=True)
+    tasks = db.scalars(pending).all()
     lease_end = now + timedelta(seconds=HermesTask.LEASE_SECONDS)
     for task in tasks:
         task.status = "claimed"

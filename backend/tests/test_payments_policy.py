@@ -25,7 +25,6 @@ from argo.models import (
 from argo.providers import build_providers
 from argo.services import (
     discover,
-    launch_campaign,
     record_service_spend,
     request_payout,
 )
@@ -158,7 +157,6 @@ def _discoverable_campaign(db, policy: dict) -> Campaign:
 
 def test_service_spend_is_recorded_and_ledgered():
     settings = get_settings()
-    providers = build_providers(settings)
     with SessionLocal() as db:
         campaign = _funded_campaign(db)
 

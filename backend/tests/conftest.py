@@ -44,6 +44,7 @@ from argo.schemas import (  # noqa: E402
 def isolated_provider_contracts(monkeypatch):
     """Keep tests offline with explicit fakes; production providers remain live-only."""
     monkeypatch.setattr(HermesProvider, "healthy", lambda self: True)
+    monkeypatch.setattr(HermesProvider, "probe", lambda self: {"ok": True, "status_code": 200})
     monkeypatch.setattr(
         HermesProvider,
         "playbook",
@@ -125,6 +126,7 @@ def isolated_provider_contracts(monkeypatch):
         )
 
     monkeypatch.setattr(VisionProvider, "verify", verify)
+    monkeypatch.setattr(VisionProvider, "probe", lambda self: {"ok": True, "model": "test-vision-contract"})
     monkeypatch.setattr(
         PaymentProvider,
         "create_funding_session",
@@ -154,6 +156,11 @@ def isolated_provider_contracts(monkeypatch):
         lambda self, **kwargs: TransferResult(external_id=f"tr_test_{kwargs['payout_id']}"),
     )
     monkeypatch.setattr(
+        PaymentProvider,
+        "probe",
+        lambda self: {"ok": True, "account_id": "acct_test_platform"},
+    )
+    monkeypatch.setattr(
         MailProvider,
         "send",
         lambda self, to, subject, body, idempotency_key, thread_id=None: MailSendResult(
@@ -162,6 +169,11 @@ def isolated_provider_contracts(monkeypatch):
         ),
     )
     monkeypatch.setattr(MailProvider, "thread_messages", lambda self, thread_ids: [])
+    monkeypatch.setattr(
+        MailProvider,
+        "probe",
+        lambda self: {"ok": True, "email": "operator@example.test", "messages_total": 1},
+    )
 
     import stripe
 

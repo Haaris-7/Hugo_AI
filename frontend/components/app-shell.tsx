@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { HugoBrand } from "@/components/brand";
@@ -30,9 +30,15 @@ const navigation = [
   { href: "/system", label: "System", icon: Settings2 },
 ];
 
+const FOCUSABLE =
+  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const drawerRef = useRef<HTMLElement>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
   const { data, isLoading } = useQuery<{ services: Array<{ status: string }> }>({
     queryKey: ["system-status-shell"],
     queryFn: () => api("/v1/system/status"),
@@ -42,17 +48,48 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const activeLabel = navigation.find(({ href }) => href === "/" ? pathname === "/" : pathname.startsWith(href))?.label ?? "Workspace";
 
   useEffect(() => setOpen(false), [pathname]);
+
   useEffect(() => {
     if (!open) return;
-    const onKeyDown = (event: KeyboardEvent) => event.key === "Escape" && setOpen(false);
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    previousFocusRef.current = document.activeElement as HTMLElement;
+    const drawer = drawerRef.current;
+    if (!drawer) return;
+    const focusable = Array.from(drawer.querySelectorAll<HTMLElement>(FOCUSABLE));
+    focusable[0]?.focus();
+
+    const trap = (event: KeyboardEvent) => {
+      if (event.key !== "Tab" || focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    drawer.addEventListener("keydown", trap);
+    return () => {
+      drawer.removeEventListener("keydown", trap);
+      previousFocusRef.current?.focus();
+      menuButtonRef.current?.focus();
+    };
   }, [open]);
 
   return (
     <div className="min-h-screen bg-[#f5f7f7] lg:grid lg:grid-cols-[236px_minmax(0,1fr)]">
       <header className="fixed inset-x-0 top-0 z-30 flex h-16 items-center justify-between border-b border-[#dce4e3] bg-white/95 px-4 lg:hidden">
-        <button onClick={() => setOpen(true)} className="grid h-11 w-11 place-items-center rounded-[6px] hover:bg-[#eef2f2]" aria-label="Open navigation">
+        <button ref={menuButtonRef} onClick={() => setOpen(true)} className="grid h-11 w-11 place-items-center rounded-[6px] hover:bg-[#eef2f2]" aria-label="Open navigation">
           <Menu className="h-5 w-5" />
         </button>
         <HugoBrand compact />
@@ -61,7 +98,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       {open && <button className="fixed inset-0 z-40 bg-[#10211f]/30 lg:hidden" onClick={() => setOpen(false)} aria-label="Close navigation overlay" />}
 
-      <aside className={cn(
+      <aside
+        ref={drawerRef}
+        className={cn(
         "fixed inset-y-0 left-0 z-50 flex w-[236px] flex-col border-r border-[#dce4e3] bg-[#fbfcfc] transition-transform duration-200 lg:sticky lg:top-0 lg:h-screen lg:translate-x-0",
         open ? "translate-x-0" : "-translate-x-full",
       )}>

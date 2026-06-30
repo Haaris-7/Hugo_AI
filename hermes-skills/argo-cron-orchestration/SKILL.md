@@ -3,7 +3,7 @@ name: argo-cron-orchestration
 description: Hermes cron loop that claims and executes durable work tasks every minute.
 ---
 
-# Argo Cron Orchestration
+# Hugo Cron Orchestration
 
 This skill defines the Hermes cron loop. It runs every minute and executes durable
 work tasks using the lease-based claim pattern.

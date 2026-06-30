@@ -38,7 +38,30 @@ type LiveProbe = {
     note?: string;
     error?: string;
   };
-  vision: { resolved: string; model: string; credentials_present: boolean };
+  vision: {
+    resolved: string;
+    model?: string;
+    credentials_present?: boolean;
+    ok?: boolean;
+    latency_ms?: number;
+    error?: string;
+  };
+  stripe: {
+    resolved: string;
+    credentials_present?: boolean;
+    ok?: boolean;
+    account_id?: string;
+    latency_ms?: number;
+    error?: string;
+  };
+  gmail: {
+    resolved: string;
+    credentials_present?: boolean;
+    ok?: boolean;
+    email?: string;
+    latency_ms?: number;
+    error?: string;
+  };
 };
 
 const CAPABILITY_LABELS: Record<string, string> = {
@@ -53,8 +76,23 @@ type AcceptanceProof = {
   campaign_id: string;
   passed: number;
   total: number;
-  criteria: Array<{ id: number; name: string; passed: boolean }>;
+  criteria: Array<{
+    id: number;
+    name: string;
+    passed: boolean;
+    evidence?: unknown;
+  }>;
 };
+
+function formatEvidence(evidence: unknown): string | null {
+  if (!evidence) return null;
+  if (typeof evidence === "string") return evidence;
+  try {
+    return JSON.stringify(evidence, null, 2);
+  } catch {
+    return String(evidence);
+  }
+}
 
 export function SystemScreen() {
   const query = useQuery<SystemStatus>({
@@ -246,22 +284,38 @@ export function SystemScreen() {
             ))}
           </div>
           {liveProbe.data && (
-            <div className="mt-4 rounded-[8px] border border-[#dce4e3] bg-white p-4 text-sm">
-              {liveProbe.data.hermes.ok ? (
-                <>
-                  <p className="font-semibold text-[#167a5b]">
-                    Live Nemotron round-trip · {liveProbe.data.hermes.model} ·{" "}
-                    {liveProbe.data.hermes.latency_ms}ms
-                  </p>
-                  <p className="mt-1 text-[#444]">&ldquo;{liveProbe.data.hermes.excerpt}&rdquo;</p>
-                </>
-              ) : (
-                <p className="text-[#526360]">
-                  {liveProbe.data.hermes.note ??
-                    liveProbe.data.hermes.error ??
-                    "Hermes is not live."}
-                </p>
-              )}
+            <div className="mt-4 grid gap-3">
+              {(["hermes", "vision", "stripe", "gmail"] as const).map((key) => {
+                const probe = liveProbe.data[key];
+                if (!probe) return null;
+                const label = CAPABILITY_LABELS[key] ?? titleCase(key);
+                return (
+                  <div key={key} className="rounded-[8px] border border-[#dce4e3] bg-white p-4 text-sm">
+                    <p className="font-semibold">{label}</p>
+                    {probe.ok ? (
+                      <p className="mt-1 text-[#167a5b]">
+                        Connected
+                        {"latency_ms" in probe && probe.latency_ms != null ? ` · ${probe.latency_ms}ms` : ""}
+                        {key === "hermes" && "model" in probe && probe.model ? ` · ${probe.model}` : ""}
+                        {key === "vision" && "model" in probe && probe.model ? ` · ${probe.model}` : ""}
+                        {key === "stripe" && "account_id" in probe && probe.account_id ? ` · ${probe.account_id}` : ""}
+                        {key === "gmail" && "email" in probe && probe.email ? ` · ${probe.email}` : ""}
+                      </p>
+                    ) : (
+                      <p className="mt-1 text-[#526360]">
+                        {"note" in probe && probe.note
+                          ? probe.note
+                          : "error" in probe && probe.error
+                            ? probe.error
+                            : "Not reachable."}
+                      </p>
+                    )}
+                    {key === "hermes" && probe.ok && "excerpt" in probe && probe.excerpt && (
+                      <p className="mt-1 text-[#444]">&ldquo;{probe.excerpt}&rdquo;</p>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
           {liveProbe.error && (
@@ -291,17 +345,24 @@ export function SystemScreen() {
             {proof.data.criteria.map((criterion) => (
               <li
                 key={criterion.id}
-                className="flex items-center gap-3 border-b border-[#dce4e3] px-4 py-3 last:border-b-0"
+                className="border-b border-[#dce4e3] px-4 py-3 last:border-b-0"
               >
-                {criterion.passed ? (
-                  <CheckCircle2 className="h-4 w-4 shrink-0 text-[#167a5b]" />
-                ) : (
-                  <CircleDashed className="h-4 w-4 shrink-0 text-[#986200]" />
+                <div className="flex items-center gap-3">
+                  {criterion.passed ? (
+                    <CheckCircle2 className="h-4 w-4 shrink-0 text-[#167a5b]" />
+                  ) : (
+                    <CircleDashed className="h-4 w-4 shrink-0 text-[#986200]" />
+                  )}
+                  <span className="text-xs font-semibold tabular-nums text-[#687975]">
+                    {String(criterion.id).padStart(2, "0")}
+                  </span>
+                  <span className="text-sm">{criterion.name}</span>
+                </div>
+                {formatEvidence(criterion.evidence) && (
+                  <pre className="mt-2 overflow-x-auto rounded-[6px] bg-[#f5f7f7] p-3 text-xs text-[#354542]">
+                    {formatEvidence(criterion.evidence)}
+                  </pre>
                 )}
-                <span className="text-xs font-semibold tabular-nums text-[#687975]">
-                  {String(criterion.id).padStart(2, "0")}
-                </span>
-                <span className="text-sm">{criterion.name}</span>
               </li>
             ))}
           </ol>

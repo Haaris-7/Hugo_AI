@@ -1,76 +1,106 @@
-services:
-  postgres:
-    image: postgres:16-alpine
-    environment:
-      POSTGRES_DB: argo
-      POSTGRES_USER: argo
-      POSTGRES_PASSWORD: argo
-    ports:
-      - "5432:5432"
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U argo"]
-      interval: 3s
-      timeout: 3s
-      retries: 20
-    volumes:
-      - argo-postgres:/var/lib/postgresql/data
-
-  api:
-    build: .
-    environment:
-      ARGO_DATABASE_URL: postgresql+psycopg://argo:argo@postgres:5432/argo
-      ARGO_INLINE_JOBS: "false"
-    ports:
-      - "8000:8000"
-    volumes:
-      - ./.env:/app/.env
-    depends_on:
-      postgres:
-        condition: service_healthy
-      migrate:
-        condition: service_completed_successfully
-
-  migrate:
-    build: .
-    command: ["alembic", "upgrade", "head"]
-    env_file:
-      - path: .env.example
-      - path: .env
-        required: false
-    environment:
-      ARGO_DATABASE_URL: postgresql+psycopg://argo:argo@postgres:5432/argo
-    depends_on:
-      postgres:
-        condition: service_healthy
-
-  worker:
-    build: .
-    command: ["python", "-m", "argo.worker"]
-    environment:
-      ARGO_DATABASE_URL: postgresql+psycopg://argo:argo@postgres:5432/argo
-      ARGO_INLINE_JOBS: "false"
-      ARGO_HERMES_CRON_ACTIVE: "true"
-    volumes:
-      - ./.env:/app/.env:ro
-    depends_on:
-      postgres:
-        condition: service_healthy
-      migrate:
-        condition: service_completed_successfully
-
-  frontend:
-    build:
-      context: ./frontend
-      args:
-        NEXT_PUBLIC_BASE_PATH: ${NEXT_PUBLIC_BASE_PATH:-}
-    environment:
-      ARGO_API_BASE_URL: http://api:8000
-      ARGO_API_TOKEN: ${ARGO_API_TOKEN:-change-me}
-    ports:
-      - "3000:3000"
-    depends_on:
-      api:
-        condition: service_started
-
-volumes:
-  argo-postgres:
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: argo
+      POSTGRES_USER: argo
+      POSTGRES_PASSWORD: argo
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U argo"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - argo-postgres:/var/lib/postgresql/data
+
+  api:
+    build:
+      context: .
+      target: prod
+    environment:
+      ARGO_DATABASE_URL: postgresql+psycopg://argo:argo@postgres:5432/argo
+      ARGO_INLINE_JOBS: "false"
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./.env:/app/.env
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
+  migrate:
+    build:
+      context: .
+      target: prod
+    command: ["alembic", "upgrade", "head"]
+    env_file:
+      - path: .env.example
+      - path: .env
+        required: false
+    environment:
+      ARGO_DATABASE_URL: postgresql+psycopg://argo:argo@postgres:5432/argo
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  worker:
+    build:
+      context: .
+      target: prod
+    command: ["python", "-m", "argo.worker"]
+    environment:
+      ARGO_DATABASE_URL: postgresql+psycopg://argo:argo@postgres:5432/argo
+      ARGO_INLINE_JOBS: "false"
+      ARGO_HERMES_CRON_ACTIVE: "true"
+    volumes:
+      - ./.env:/app/.env:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
+  dev:
+    build:
+      context: .
+      target: dev
+    environment:
+      ARGO_DATABASE_URL: postgresql+psycopg://argo:argo@postgres:5432/argo
+      ARGO_INLINE_JOBS: "true"
+    volumes:
+      - ./.env:/app/.env
+      - ./backend:/app/backend
+      - ./backend/tests:/app/backend/tests
+      - ./hermes-plugin:/app/hermes-plugin
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        NEXT_PUBLIC_BASE_PATH: ${NEXT_PUBLIC_BASE_PATH:-}
+    environment:
+      ARGO_API_BASE_URL: http://api:8000
+      ARGO_API_TOKEN: ${ARGO_API_TOKEN:-change-me}
+    ports:
+      - "3000:3000"
+    depends_on:
+      api:
+        condition: service_started
+
+volumes:
+  argo-postgres:

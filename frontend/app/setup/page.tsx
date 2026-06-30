@@ -17,6 +17,7 @@ type SetupSummary = {
   config: Record<string, string>;
   capabilities: Record<string, CapabilityInfo>;
   validation: { ok: boolean; problems: string[] };
+  demo_mode?: boolean;
 };
 
 type TestResult = {
@@ -73,6 +74,7 @@ const GROUPS: Array<{ title: string; hint: string; fields: FieldDef[] }> = [
 export default function SetupPage() {
   const [summary, setSummary] = useState<SetupSummary | null>(null);
   const [values, setValues] = useState<Record<string, string>>({});
+  const [demoMode, setDemoMode] = useState(false);
   const [test, setTest] = useState<TestResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -81,6 +83,7 @@ export default function SetupPage() {
   useEffect(() => {
     api<SetupSummary>("/v1/system/setup").then((data) => {
       setSummary(data);
+      setDemoMode(Boolean(data.demo_mode));
       setValues(Object.fromEntries(
         Object.entries(data.config).filter(([, value]) => value && !value.includes("…") && value !== "set"),
       ));
@@ -89,11 +92,13 @@ export default function SetupPage() {
 
   async function save() {
     const updates = Object.fromEntries(Object.entries(values).filter(([, value]) => value !== ""));
+    updates.ARGO_DEMO_MODE = demoMode ? "true" : "false";
     const result = await api<SetupSummary>("/v1/system/setup", {
       method: "POST",
       body: JSON.stringify({ updates }),
     });
     setSummary(result);
+    setDemoMode(Boolean(result.demo_mode));
     setSaved(true);
     return result;
   }
@@ -122,6 +127,29 @@ export default function SetupPage() {
           Hugo runs only on connected services. Creator discovery is provisioned and managed by Hermes through the influencers.club agent integration, so it has no setup field here.
         </p>
       </div>
+
+      <section className="mt-7 rounded-[10px] border border-[#dce4e3] bg-white p-5">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-[17px] font-semibold">Demo data</h2>
+            <p className="mt-1 max-w-[52ch] text-sm leading-5 text-[#526360]">
+              Seed demo campaigns — Populates the cockpit with realistic sample data across all lifecycle stages. Disable to remove.
+            </p>
+          </div>
+          <label className="inline-flex min-h-11 cursor-pointer items-center gap-3 rounded-[6px] border border-[#c5d1d0] px-4">
+            <span className="text-sm font-medium">{demoMode ? "Enabled" : "Disabled"}</span>
+            <input
+              type="checkbox"
+              className="h-5 w-5 accent-[#019393]"
+              checked={demoMode}
+              onChange={(event) => {
+                setDemoMode(event.target.checked);
+                setSaved(false);
+              }}
+            />
+          </label>
+        </div>
+      </section>
 
       <div className="mt-7 flex flex-wrap gap-2">
         {summary && Object.entries(summary.capabilities).map(([name, capability]) => (

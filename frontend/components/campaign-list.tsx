@@ -1,9 +1,9 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Plus, Search, SlidersHorizontal } from "lucide-react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
 import { api } from "@/lib/api";
 import type { CampaignSummary } from "@/lib/types";
 import { apiErrorMessage, learningModeLabel, money, relativeTime } from "@/lib/utils";
@@ -49,7 +49,17 @@ export function CampaignList() {
             <thead className="bg-[#f5f7f7]"><tr className="text-xs font-semibold text-[#526360]"><th className="px-4 py-3">Campaign</th><th className="px-4 py-3">State</th><th className="px-4 py-3">Budget</th><th className="px-4 py-3">Results</th><th className="px-4 py-3">Learning policy</th><th className="px-4 py-3 text-right">Updated</th></tr></thead>
             <tbody>{query.data.items.map((campaign, index) => (
               <tr key={campaign.id} className="row-enter border-t border-[#dce4e3] hover:bg-[#f7f9f9]" style={{ animationDelay: `${index * 25}ms` }}>
-                <td className="px-4 py-3.5"><Link href={`/campaigns/${campaign.id}`} className="font-semibold hover:text-[#006e6e]">{campaign.name}</Link><p className="mt-1 max-w-sm truncate text-xs text-[#526360]">{campaign.brand_name} · {campaign.goal}</p></td>
+                <td className="px-4 py-3.5">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Link href={`/campaigns/${campaign.id}`} className="font-semibold hover:text-[#006e6e]">{campaign.name}</Link>
+                    {campaign.is_demo && (
+                      <span className="rounded-[4px] bg-[#eef2f2] px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[#526360]">
+                        Demo
+                      </span>
+                    )}
+                  </div>
+                  <p className="mt-1 max-w-sm truncate text-xs text-[#526360]">{campaign.brand_name} · {campaign.goal}</p>
+                </td>
                 <td className="px-4 py-3.5"><StatusBadge value={campaign.status} /></td>
                 <td className="px-4 py-3.5 font-medium tabular-nums">{money(campaign.budget_cents)}</td>
                 <td className="px-4 py-3.5 text-sm tabular-nums text-[#354542]">{campaign.views ? `${campaign.views.toLocaleString()} views` : "—"}</td>

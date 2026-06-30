@@ -1,9 +1,9 @@
 ---
 name: argo-strategy-engine
-description: Design a budget-safe creator campaign using Argo playbooks, priors, and reputation evidence.
+description: Design a budget-safe creator campaign using Hugo playbooks, priors, and reputation evidence.
 ---
 
-# Argo Strategy Engine
+# Hugo Strategy Engine
 
 Call `argo_generate_strategy` with the campaign ID. The backend fetches the latest
 algorithm playbook, strategy priors, and learned heuristics, then returns a

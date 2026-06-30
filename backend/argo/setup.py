@@ -20,7 +20,8 @@ class Field:
 
 
 WIZARD_FIELDS: list[Field] = [
-    Field("ARGO_HERMES_BASE_URL", "NemoClaw Hermes base URL", "http://127.0.0.1:8642/v1"),
+    Field("ARGO_HERMES_BASE_URL", "NemoClaw Hermes base URL", "http://host.docker.internal:8642/v1"),
+    Field("ARGO_DEMO_MODE", "Seed demo campaigns", "false"),
     Field("ARGO_HERMES_API_KEY", "Hermes API key", secret=True),
     Field("ARGO_NVIDIA_API_KEY", "NVIDIA NIM API key", secret=True),
     Field("ARGO_NVIDIA_VISION_MODEL", "NIM vision model", "nvidia/nemotron-nano-12b-v2-vl"),
@@ -61,7 +62,12 @@ def write_env(updates: dict[str, str], path: Path = ENV_PATH) -> None:
     temporary = path.with_name(f".{path.name}.tmp")
     temporary.write_text("\n".join(f"{key}={value}" for key, value in current.items()) + "\n")
     temporary.chmod(0o600)
-    temporary.replace(path)
+    try:
+        temporary.replace(path)
+    except OSError:
+        # Bind-mounted files can't be atomically replaced; write in-place
+        path.write_text(temporary.read_text())
+        temporary.unlink(missing_ok=True)
     path.chmod(0o600)
 
 
@@ -87,13 +93,27 @@ def summary() -> dict:
         "capabilities": settings.capability_modes(),
         "required_env": CAPABILITY_ENV,
         "validation": validation,
+        "demo_mode": settings.demo_mode,
     }
 
 
 def apply_updates(updates: dict[str, str]) -> dict:
     allowed = {field.key for field in WIZARD_FIELDS}
-    write_env({key: value for key, value in updates.items() if key in allowed})
+    filtered = {key: value for key, value in updates.items() if key in allowed}
+    previous = read_env()
+    prev_demo = previous.get("ARGO_DEMO_MODE", "false").lower() in ("true", "1", "yes")
+    write_env(filtered)
     get_settings.cache_clear()
+    new_demo = read_env().get("ARGO_DEMO_MODE", "false").lower() in ("true", "1", "yes")
+    if new_demo != prev_demo:
+        from .db import SessionLocal
+        from .demo import clear_demo_data, seed_demo_data
+
+        with SessionLocal() as db:
+            if new_demo:
+                seed_demo_data(db)
+            else:
+                clear_demo_data(db)
     return summary()
 
 
