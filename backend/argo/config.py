@@ -100,6 +100,8 @@ class Settings(BaseSettings):
         return states
 
     def validate_runtime(self) -> None:
+        if self.demo_mode:
+            return
         problems: list[str] = []
         if self.api_token in ("", "change-me"):
             problems.append("ARGO_API_TOKEN must be set to a non-default value")

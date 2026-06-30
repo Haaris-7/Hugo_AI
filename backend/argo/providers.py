@@ -696,7 +696,174 @@ class Providers:
     telegram: TelegramProvider
 
 
+class DemoHermesProvider(HermesProvider):
+    """Returns canned responses so the full lifecycle works without API keys."""
+
+    def healthy(self) -> bool:
+        return True
+
+    def probe(self) -> dict[str, Any]:
+        return {"ok": True, "status_code": 200, "demo": True}
+
+    def strategy(self, context: dict[str, Any]) -> HermesStrategy:
+        cap = context.get("per_creator_cap_cents", 15_000)
+        rate = min(cap, 10_000)
+        return HermesStrategy(
+            creator_tier="micro",
+            target_rate_cents=rate,
+            rationale=(
+                "Demo strategy: micro creators with authentic routine content "
+                "deliver the best cost-per-result for skincare campaigns."
+            ),
+            projected_cost_per_result=0.019,
+            compensation_components=[{"kind": "base", "rate_cents": rate}],
+        )
+
+    def playbook(self, platform: str) -> dict[str, Any]:
+        return {
+            "platform": platform,
+            "signals": [{"signal": "Favor concise native creator video.", "weight": 0.8}],
+            "sources": [{"url": f"https://example.test/{platform}-playbook"}],
+            "confidence": 0.82,
+        }
+
+    def learning(self, dossier: dict[str, Any]) -> HermesLearning:
+        return HermesLearning(
+            summary="Demo learning: micro skincare creators on TikTok delivered the best CPV.",
+            heuristic="Prefer micro creators with strong routine storytelling.",
+            skill_name="argo-strategy-engine",
+            evidence_ids=list(dossier.get("evidence_ids", ["demo-evidence"])),
+            governance={"risk": "low", "generator": "demo", "demo": True},
+        )
+
+    def outreach(self, context: dict[str, Any]) -> str:
+        name = context.get("campaign_name", "Campaign")
+        rate = context.get("rate_cents", 10_000)
+        return (
+            f"Hi! We'd love to collaborate with you on {name}. "
+            f"We're offering ${rate / 100:.2f} for a sponsored post. "
+            "Please include #ad disclosure and our tracking link. "
+            "Reply ACCEPT, propose a rate, or decline."
+        )
+
+    def negotiate(self, context: dict[str, Any]) -> HermesNegotiation:
+        return HermesNegotiation(
+            intent="accept",
+            response="Great, the proposed rate works. Looking forward to collaborating!",
+            agreed_rate_cents=context.get("rate_cents", 10_000),
+        )
+
+    def discover_creators(
+        self, niche: str, platform: str, limit: int, exclude_handles: set[str]
+    ) -> list[DiscoveryCandidate]:
+        pool = [
+            ("demo.creator.alpha", 42_000, 5.2, 8.0),
+            ("demo.creator.beta", 67_000, 4.8, 5.5),
+            ("demo.creator.gamma", 28_000, 6.1, 12.0),
+            ("demo.creator.delta", 55_000, 5.5, 7.0),
+            ("demo.creator.epsilon", 35_000, 5.9, 9.0),
+        ]
+        candidates = []
+        for handle, followers, engagement, fake_pct in pool:
+            if handle in exclude_handles or len(candidates) >= limit:
+                break
+            candidates.append(
+                DiscoveryCandidate(
+                    handle=handle,
+                    email=f"{handle.replace('.', '-')}@example.test",
+                    followers=followers,
+                    engagement_rate=engagement,
+                    fake_follower_percent=fake_pct,
+                    niche_match=85,
+                    audience_quality=80,
+                    brand_fit=78,
+                    profile_data={"niche": niche, "demo": True},
+                )
+            )
+        return candidates
+
+    def sample(self) -> dict[str, Any]:
+        return {
+            "model": "demo-mode",
+            "response": "Demo mode active — no Hermes connection required.",
+        }
+
+    def _chat(self, messages: list[dict[str, str]]) -> str:
+        return '{"demo": true}'
+
+
+class DemoVisionProvider(VisionProvider):
+    def verify(self, caption: str, media_url: str | None, **kwargs: Any) -> QAResult:
+        findings: list[dict[str, Any]] = []
+        lowered = (caption or "").lower()
+        if "#ad" not in lowered and "sponsored" not in lowered:
+            findings.append({"code": "missing_disclosure", "message": "FTC disclosure missing."})
+        if "argo.link/" not in lowered:
+            findings.append({"code": "missing_tracking_link", "message": "Tracking link missing."})
+        return QAResult(
+            passed=not findings,
+            severity="major" if findings else "none",
+            findings=findings,
+            model="demo-vision",
+        )
+
+    def probe(self) -> dict[str, Any]:
+        return {"ok": True, "model": "demo-vision", "demo": True}
+
+
+class DemoPaymentProvider(PaymentProvider):
+    def create_funding_session(self, campaign_id: str, amount_cents: int) -> FundingResult:
+        return FundingResult(
+            external_id=f"cs_demo_{campaign_id}",
+            url=f"http://localhost:3000/campaigns/{campaign_id}?funding=demo",
+            payment_intent_id=f"pi_demo_{campaign_id}",
+        )
+
+    def create_onboarding_link(self, creator_id: str, email: str | None) -> tuple[str, str, bool]:
+        return (
+            f"acct_demo_{creator_id}",
+            f"http://localhost:3000/system?onboarding=demo",
+            True,
+        )
+
+    def resolve_source_charge(self, payment_intent_id: str) -> str:
+        return payment_intent_id.replace("pi_", "ch_", 1)
+
+    def transfer(self, **kwargs: Any) -> TransferResult:
+        return TransferResult(external_id=f"tr_demo_{kwargs.get('payout_id', 'unknown')}")
+
+    def probe(self) -> dict[str, Any]:
+        return {"ok": True, "account_id": "acct_demo_platform", "demo": True}
+
+
+class DemoMailProvider(MailProvider):
+    def send(
+        self, to: str, subject: str, body: str, idempotency_key: str, **kwargs: Any
+    ) -> MailSendResult:
+        return MailSendResult(
+            message_id=f"msg_demo_{idempotency_key}",
+            thread_id=kwargs.get("thread_id") or f"thread_demo_{idempotency_key}",
+        )
+
+    def thread_messages(self, thread_ids: set[str]) -> list[MailReply]:
+        return []
+
+    def probe(self) -> dict[str, Any]:
+        return {"ok": True, "email": "demo@example.test", "messages_total": 0, "demo": True}
+
+
 def build_providers(settings: Settings) -> Providers:
+    if settings.demo_mode:
+        hermes = DemoHermesProvider(settings)
+        return Providers(
+            hermes=hermes,
+            discovery=DiscoveryProvider(hermes),
+            vision=DemoVisionProvider(settings),
+            payments=DemoPaymentProvider(settings),
+            mail=DemoMailProvider(settings),
+            metrics=MetricsProvider(settings),
+            telegram=TelegramProvider(settings),
+        )
     hermes = HermesProvider(settings)
     return Providers(
         hermes=hermes,
