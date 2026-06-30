@@ -3,7 +3,7 @@ import time
 from sqlalchemy import or_, select
 
 from .config import get_settings
-from .db import SessionLocal, create_schema
+from .db import SessionLocal
 from .messaging import process_telegram_updates, send_approval_notification, send_operator_message
 from .models import ApprovalRequest, Campaign, OutboxJob, utcnow
 from .providers import build_providers
@@ -66,7 +66,6 @@ def run_once() -> bool:
 
 
 def main() -> None:
-    create_schema()
     while True:
         settings = get_settings()
         try:

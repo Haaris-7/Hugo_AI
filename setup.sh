@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Argo AI — one-command setup.
+# Hugo — one-command setup.
 #
 #   git clone <repo> && cd <repo> && ./setup.sh
 #
@@ -12,11 +12,12 @@
 #   5. Opens the setup wizard in your browser
 #
 # After you configure the live integrations in the wizard, click
-# "Open the cockpit" to start using Argo.
+# "Open the cockpit" to start using Hugo.
 #
 # Options:
 #   --stop     Stop the running stack
 #   --restart  Rebuild and restart (use after code changes)
+#   --clean    Stop and remove all containers, volumes, and database
 #
 set -euo pipefail
 
@@ -35,16 +36,22 @@ fail() { printf "${RED}✗ %s${RESET}\n" "$*" >&2; exit 1; }
 for arg in "$@"; do
   case "$arg" in
     --stop)
-      log "Stopping Argo"
+      log "Stopping Hugo"
       docker compose down
       ok "Stopped"
       exit 0
       ;;
     --restart)
-      log "Restarting Argo (rebuild)"
+      log "Restarting Hugo (rebuild)"
       docker compose down
       docker compose up --build -d
       ok "Restarted — cockpit at http://localhost:3000"
+      exit 0
+      ;;
+    --clean)
+      log "Cleaning Hugo (removing containers, volumes, and database)"
+      docker compose down -v
+      ok "Cleaned — run ./setup.sh to start fresh"
       exit 0
       ;;
   esac
@@ -57,6 +64,11 @@ if ! command -v docker >/dev/null 2>&1; then
   fail "Docker is required. Install it from https://docs.docker.com/get-docker/"
 fi
 ok "Docker $(docker --version | awk '{print $3}' | tr -d ',')"
+
+if ! docker info >/dev/null 2>&1; then
+  fail "Docker daemon is not running. Start Docker Desktop first."
+fi
+ok "Docker daemon is running"
 
 if ! docker compose version >/dev/null 2>&1; then
   fail "Docker Compose v2 is required. It ships with Docker Desktop."
@@ -84,7 +96,7 @@ if grep -q '^ARGO_AGENT_TOKEN=change-agent-token$' .env; then
 fi
 
 # ── 3. Build and start ──────────────────────────────────────────────────────
-log "Building and starting Argo (this may take a minute on first run)"
+log "Building and starting Hugo (this may take a minute on first run)"
 docker compose up --build -d
 
 # ── 4. Wait for services ────────────────────────────────────────────────────
@@ -110,7 +122,7 @@ wait_for "Cockpit"  "http://localhost:3000"
 # ── 5. Open the setup wizard ────────────────────────────────────────────────
 echo ""
 printf "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}\n"
-printf "${GREEN}  Argo AI is running!${RESET}\n"
+printf "${GREEN}  Hugo is running!${RESET}\n"
 echo ""
 printf "  Setup wizard:  ${CYAN}http://localhost:3000/setup${RESET}\n"
 printf "  Cockpit:       ${CYAN}http://localhost:3000${RESET}\n"

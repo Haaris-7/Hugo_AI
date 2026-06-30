@@ -7,7 +7,7 @@ from sqlalchemy import func, select, text
 from sqlalchemy.orm import Session
 
 from .config import Settings, get_settings
-from .db import create_schema, get_db
+from .db import get_db
 from .domain import emit
 from .messaging import confirm_telegram_pairing, start_telegram_pairing
 from .models import (
@@ -88,7 +88,6 @@ from .services import (
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    create_schema()
     yield
 
 

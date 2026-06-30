@@ -11,6 +11,16 @@ depends_on = None
 
 
 def upgrade() -> None:
+    conn = op.get_bind()
+    table_exists = conn.execute(
+        sa.text(
+            "SELECT 1 FROM information_schema.tables "
+            "WHERE table_name = 'hermes_tasks'"
+        )
+    ).fetchone()
+    if table_exists:
+        return
+
     op.create_table(
         "hermes_tasks",
         sa.Column("id", sa.String(36), primary_key=True),
