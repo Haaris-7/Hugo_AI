@@ -4,7 +4,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Check, Database, ExternalLink, FlaskConical, Mail, Play, RefreshCw, Send, ShieldCheck, Wallet, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { api } from "@/lib/api";
 import type { CampaignState, Deal } from "@/lib/types";
 import { apiErrorMessage, compactNumber, learningModeLabel, money, nextActionLabel, relativeTime, titleCase } from "@/lib/utils";
@@ -146,18 +147,79 @@ function ActivityLog({ state }: { state: CampaignState }) {
 }
 
 function DealDrawer({ deal, campaignId, onClose, onRefresh }: { deal: Deal; campaignId: string; onClose: () => void; onRefresh: () => void }) {
+  const [mounted, setMounted] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const connect = useMutation({ mutationFn: () => api<{ url?: string }>(`/v1/creators/${deal.creator_id}/connect-onboarding-link`, { method: "POST", body: "{}" }), onSuccess: (result) => { onRefresh(); if (result.url) window.open(result.url, "_blank", "noopener,noreferrer"); }, onError: (cause) => setError(apiErrorMessage(cause)) });
   const offer = deal.messages.find((message) => message.direction === "outbound" && message.intent === "offer");
-  return <><button className="fixed inset-0 z-50 bg-[#10211f]/30" onClick={onClose} aria-label="Close creator details" /><aside className="drawer-enter fixed inset-y-0 right-0 z-50 w-full max-w-xl overflow-y-auto border-l border-[#dce4e3] bg-white p-6 shadow-[0_8px_24px_rgba(16,33,31,.16)]" role="dialog" aria-modal="true" aria-label={`Creator ${deal.handle}`}><div className="flex items-start justify-between"><div><p className="text-sm text-[#526360]">Creator deal</p><h2 className="display-face mt-1 text-[32px]">@{deal.handle}</h2><p className="mt-1 text-sm text-[#526360]">{deal.email}</p></div><button onClick={onClose} className="grid h-11 w-11 place-items-center rounded-[6px] hover:bg-[#eef2f2]" aria-label="Close"><X className="h-5 w-5" /></button></div>{error && <div className="mt-5"><ErrorState message={error} /></div>}<dl className="mt-7 grid grid-cols-2 gap-x-5 gap-y-6 rounded-[8px] border border-[#dce4e3] bg-[#f8fafa] p-4"><div><dt className="text-xs text-[#526360]">Offer</dt><dd className="mt-1 text-2xl font-semibold">{deal.agreed_rate_cents ? money(deal.agreed_rate_cents) : "Pending"}</dd></div><div><dt className="text-xs text-[#526360]">Stage</dt><dd className="mt-2"><StatusBadge value={deal.status} /></dd></div><div><dt className="text-xs text-[#526360]">Fit score</dt><dd className="mt-1 font-semibold">{deal.fit_score.toFixed(0)}</dd></div><div><dt className="text-xs text-[#526360]">Reputation</dt><dd className="mt-1 font-semibold">{deal.reputation.toFixed(0)}</dd></div></dl><section className="mt-7"><div className="flex items-center gap-2"><Mail className="h-4 w-4 text-[#019393]" /><h3 className="font-semibold">Deal sent by email</h3></div>{offer ? <div className="mt-3 whitespace-pre-wrap rounded-[8px] bg-[#f1f4f3] p-4 text-sm leading-6 text-[#354542]">{offer.body}</div> : <p className="mt-2 text-sm text-[#526360]">The approved deal will appear here as soon as Hugo sends it.</p>}</section><section className="mt-7 border-t border-[#dce4e3] pt-6"><h3 className="font-semibold">Conversation</h3><div className="mt-3 space-y-3">{deal.messages.length ? deal.messages.map((message) => <article key={message.id} className={`rounded-[8px] p-3 text-sm ${message.direction === "outbound" ? "ml-7 bg-[#e6f5f4]" : "mr-7 bg-[#f1f4f3]"}`}><div className="mb-1 flex justify-between gap-3 text-xs font-semibold text-[#526360]"><span>{message.direction === "outbound" ? "Hugo" : `@${deal.handle}`}</span><time>{relativeTime(message.created_at)}</time></div><p className="whitespace-pre-wrap leading-5">{message.body}</p></article>) : <p className="text-sm text-[#526360]">Waiting for outreach.</p>}</div></section><div className="mt-7 border-t border-[#dce4e3] pt-6"><h3 className="font-semibold">Stripe Connect</h3><p className="mt-2 text-sm text-[#526360]">{deal.stripe_onboarded ? "Recipient onboarding is complete." : "Hugo sends Stripe's hosted onboarding link after the creator accepts by email."}</p>{deal.stripe_onboarded ? <p className="mt-3 flex items-center gap-2 text-[#167a5b]"><ShieldCheck className="h-4 w-4" />Payout recipient ready</p> : <Button variant="secondary" className="mt-3 w-full" loading={connect.isPending} onClick={() => connect.mutate()}><ExternalLink className="h-4 w-4" />Create hosted onboarding link</Button>}</div><p className="mt-8 text-xs text-[#687975]">Campaign {campaignId.slice(0, 8)} · Deal {deal.id.slice(0, 8)}</p></aside></>;
+
+  useEffect(() => setMounted(true), []);
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKeyDown);
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [onClose]);
+
+  if (!mounted) return null;
+
+  return createPortal(
+    <>
+      <button className="fixed inset-0 z-[70] bg-[#10211f]/30" onClick={onClose} aria-label="Close creator details" />
+      <aside className="drawer-enter fixed inset-y-0 right-0 z-[80] flex h-[100dvh] w-full max-w-xl flex-col border-l border-[#dce4e3] bg-white shadow-[0_8px_24px_rgba(16,33,31,.16)]" role="dialog" aria-modal="true" aria-label={`Creator ${deal.handle}`}>
+        <div className="flex items-start justify-between border-b border-[#dce4e3] px-6 py-5">
+          <div><p className="text-sm text-[#526360]">Creator deal</p><h2 className="display-face mt-1 text-[32px]">@{deal.handle}</h2><p className="mt-1 text-sm text-[#526360]">{deal.email}</p></div>
+          <button onClick={onClose} className="grid h-11 w-11 place-items-center rounded-[6px] hover:bg-[#eef2f2]" aria-label="Close"><X className="h-5 w-5" /></button>
+        </div>
+        <div className="flex-1 overflow-y-auto px-6 py-6">
+          {error && <div className="mb-5"><ErrorState message={error} /></div>}
+          <dl className="grid grid-cols-2 gap-x-5 gap-y-6 rounded-[8px] border border-[#dce4e3] bg-[#f8fafa] p-4"><div><dt className="text-xs text-[#526360]">Offer</dt><dd className="mt-1 text-2xl font-semibold">{deal.agreed_rate_cents ? money(deal.agreed_rate_cents) : "Pending"}</dd></div><div><dt className="text-xs text-[#526360]">Stage</dt><dd className="mt-2"><StatusBadge value={deal.status} /></dd></div><div><dt className="text-xs text-[#526360]">Fit score</dt><dd className="mt-1 font-semibold">{deal.fit_score.toFixed(0)}</dd></div><div><dt className="text-xs text-[#526360]">Reputation</dt><dd className="mt-1 font-semibold">{deal.reputation.toFixed(0)}</dd></div></dl>
+          <section className="mt-7"><div className="flex items-center gap-2"><Mail className="h-4 w-4 text-[#019393]" /><h3 className="font-semibold">Deal sent by email</h3></div>{offer ? <div className="mt-3 whitespace-pre-wrap rounded-[8px] bg-[#f1f4f3] p-4 text-sm leading-6 text-[#354542]">{offer.body}</div> : <p className="mt-2 text-sm text-[#526360]">The approved deal will appear here as soon as Hugo sends it.</p>}</section>
+          <section className="mt-7 border-t border-[#dce4e3] pt-6"><h3 className="font-semibold">Conversation</h3><div className="mt-3 space-y-3">{deal.messages.length ? deal.messages.map((message) => <article key={message.id} className={`rounded-[8px] p-3 text-sm ${message.direction === "outbound" ? "ml-7 bg-[#e6f5f4]" : "mr-7 bg-[#f1f4f3]"}`}><div className="mb-1 flex justify-between gap-3 text-xs font-semibold text-[#526360]"><span>{message.direction === "outbound" ? "Hugo" : `@${deal.handle}`}</span><time>{relativeTime(message.created_at)}</time></div><p className="whitespace-pre-wrap leading-5">{message.body}</p></article>) : <p className="text-sm text-[#526360]">Waiting for outreach.</p>}</div></section>
+          <div className="mt-7 border-t border-[#dce4e3] pt-6"><h3 className="font-semibold">Stripe Connect</h3><p className="mt-2 text-sm text-[#526360]">{deal.stripe_onboarded ? "Recipient onboarding is complete." : "Hugo sends Stripe's hosted onboarding link after the creator accepts by email."}</p>{deal.stripe_onboarded ? <p className="mt-3 flex items-center gap-2 text-[#167a5b]"><ShieldCheck className="h-4 w-4" />Payout recipient ready</p> : <Button variant="secondary" className="mt-3 w-full" loading={connect.isPending} onClick={() => connect.mutate()}><ExternalLink className="h-4 w-4" />Create hosted onboarding link</Button>}</div>
+          <p className="mt-8 text-xs text-[#687975]">Campaign {campaignId.slice(0, 8)} · Deal {deal.id.slice(0, 8)}</p>
+        </div>
+      </aside>
+    </>,
+    document.body,
+  );
 }
 
 function MetricsDialog({ campaignId, payoutModel, onClose, onSuccess }: { campaignId: string; payoutModel: string; onClose: () => void; onSuccess: (status: string) => void }) {
+  const [mounted, setMounted] = useState(false);
   const [views, setViews] = useState(25000);
   const [engagements, setEngagements] = useState(2100);
   const [conversions, setConversions] = useState(120);
   const mutation = useMutation<{ status: string }>({ mutationFn: () => api(`/v1/campaigns/${campaignId}/metrics`, { method: "POST", body: JSON.stringify({ views, engagements, conversions }) }), onSuccess: (result) => onSuccess(result.status) });
   const measured = payoutModel !== "flat";
   const input = "h-11 w-full rounded-[6px] border border-[#c5d1d0] bg-white px-3 outline-none focus:border-[#019393] focus:shadow-[0_0_0_3px_rgba(1,147,147,.12)]";
-  return <><button className="fixed inset-0 z-50 bg-[#10211f]/30" onClick={onClose} aria-label="Close metrics dialog" /><section className="drawer-enter fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-[10px] border border-[#dce4e3] bg-white p-6 shadow-[0_8px_24px_rgba(16,33,31,.16)]" role="dialog" aria-modal="true" aria-labelledby="metrics-title"><div className="flex justify-between"><div><p className="text-sm text-[#526360]">{measured ? "Settle performance" : "Close campaign"}</p><h2 id="metrics-title" className="display-face mt-1 text-[32px]">Final metrics</h2></div><button onClick={onClose} className="grid h-11 w-11 place-items-center rounded-[6px] hover:bg-[#eef2f2]" aria-label="Close"><X className="h-5 w-5" /></button></div><p className="mt-4 text-sm text-[#526360]">{measured ? "Saving results calculates the QA-gated performance payout. Learning starts after every amount due is transferred." : "Saving results completes the campaign and starts database learning asynchronously."}</p><div className={`mt-6 grid grid-cols-1 gap-4 ${payoutModel === "affiliate" ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}><label><span className="mb-2 block text-sm font-medium">Views</span><input type="number" min="0" value={views} onChange={(event) => setViews(Number(event.target.value))} className={input} /></label><label><span className="mb-2 block text-sm font-medium">Engagements</span><input type="number" min="0" value={engagements} onChange={(event) => setEngagements(Number(event.target.value))} className={input} /></label>{payoutModel === "affiliate" && <label><span className="mb-2 block text-sm font-medium">Conversions</span><input type="number" min="0" value={conversions} onChange={(event) => setConversions(Number(event.target.value))} className={input} /></label>}</div>{mutation.error && <p className="mt-4 text-sm text-[#b42318]">{apiErrorMessage(mutation.error)}</p>}<div className="mt-7 flex justify-end gap-2"><Button variant="ghost" onClick={onClose}>Cancel</Button><Button loading={mutation.isPending} onClick={() => mutation.mutate()}>{measured ? "Calculate payout" : "Complete campaign"}</Button></div></section></>;
+
+  useEffect(() => setMounted(true), []);
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKeyDown);
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [onClose]);
+
+  if (!mounted) return null;
+
+  return createPortal(
+    <>
+      <button className="fixed inset-0 z-[70] bg-[#10211f]/30" onClick={onClose} aria-label="Close metrics dialog" />
+      <section className="drawer-enter fixed left-1/2 top-1/2 z-[80] w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-[10px] border border-[#dce4e3] bg-white p-6 shadow-[0_8px_24px_rgba(16,33,31,.16)]" role="dialog" aria-modal="true" aria-labelledby="metrics-title"><div className="flex justify-between"><div><p className="text-sm text-[#526360]">{measured ? "Settle performance" : "Close campaign"}</p><h2 id="metrics-title" className="display-face mt-1 text-[32px]">Final metrics</h2></div><button onClick={onClose} className="grid h-11 w-11 place-items-center rounded-[6px] hover:bg-[#eef2f2]" aria-label="Close"><X className="h-5 w-5" /></button></div><p className="mt-4 text-sm text-[#526360]">{measured ? "Saving results calculates the QA-gated performance payout. Learning starts after every amount due is transferred." : "Saving results completes the campaign and starts database learning asynchronously."}</p><div className={`mt-6 grid grid-cols-1 gap-4 ${payoutModel === "affiliate" ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}><label><span className="mb-2 block text-sm font-medium">Views</span><input type="number" min="0" value={views} onChange={(event) => setViews(Number(event.target.value))} className={input} /></label><label><span className="mb-2 block text-sm font-medium">Engagements</span><input type="number" min="0" value={engagements} onChange={(event) => setEngagements(Number(event.target.value))} className={input} /></label>{payoutModel === "affiliate" && <label><span className="mb-2 block text-sm font-medium">Conversions</span><input type="number" min="0" value={conversions} onChange={(event) => setConversions(Number(event.target.value))} className={input} /></label>}</div>{mutation.error && <p className="mt-4 text-sm text-[#b42318]">{apiErrorMessage(mutation.error)}</p>}<div className="mt-7 flex justify-end gap-2"><Button variant="ghost" onClick={onClose}>Cancel</Button><Button loading={mutation.isPending} onClick={() => mutation.mutate()}>{measured ? "Calculate payout" : "Complete campaign"}</Button></div></section>
+    </>,
+    document.body,
+  );
 }

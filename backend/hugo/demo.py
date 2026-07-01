@@ -48,6 +48,115 @@ def _demo_compensation(rate_cents: int = 12_000) -> dict[str, Any]:
     }
 
 
+def _seed_transferred_deal(
+    db: Session,
+    *,
+    campaign: Campaign,
+    creator: Creator,
+    rate_cents: int,
+    fit_score: float,
+    thread_key: str,
+    offer_body: str,
+    accept_body: str,
+    caption: str,
+    media_url: str,
+    post_url: str,
+    transfer_id: str,
+    idempotency_key: str,
+    include_failed_draft_qa: bool = False,
+) -> Deal:
+    deal = Deal(
+        campaign_id=campaign.id,
+        creator_id=creator.id,
+        status=DealStatus.TRANSFERRED.value,
+        fit_score=fit_score,
+        agreed_rate_cents=rate_cents,
+        compensation=_demo_compensation(rate_cents),
+        terms_accepted=True,
+        draft_approved=True,
+        final_approved=True,
+    )
+    db.add(deal)
+    db.flush()
+    db.add_all(
+        [
+            DealMessage(
+                deal_id=deal.id,
+                direction="outbound",
+                external_id=f"msg_demo_out_{thread_key}",
+                provider_thread_id=f"thread_demo_{thread_key}",
+                body=offer_body,
+                intent="offer",
+            ),
+            DealMessage(
+                deal_id=deal.id,
+                direction="inbound",
+                external_id=f"msg_demo_in_{thread_key}",
+                provider_thread_id=f"thread_demo_{thread_key}",
+                body=accept_body,
+                intent="accept",
+            ),
+        ]
+    )
+    deliverable = Deliverable(
+        deal_id=deal.id,
+        caption=caption,
+        media_url=media_url,
+        post_url=post_url,
+        stage="final",
+        qa_status="passed",
+    )
+    db.add(deliverable)
+    db.flush()
+    checks = [
+        QACheck(
+            deliverable_id=deliverable.id,
+            severity="none",
+            passed=True,
+            findings=[],
+            model="nvidia/nemotron-nano-12b-v2-vl",
+        )
+    ]
+    if include_failed_draft_qa:
+        checks.insert(
+            0,
+            QACheck(
+                deliverable_id=deliverable.id,
+                severity="major",
+                passed=False,
+                findings=[
+                    {
+                        "code": "missing_disclosure",
+                        "message": "FTC disclosure missing on draft.",
+                    }
+                ],
+                model="nvidia/nemotron-nano-12b-v2-vl",
+            ),
+        )
+    db.add_all(checks)
+    db.add(
+        Payout(
+            campaign_id=campaign.id,
+            deal_id=deal.id,
+            creator_id=creator.id,
+            amount_cents=rate_cents,
+            status="transferred",
+            stripe_transfer_id=transfer_id,
+            idempotency_key=idempotency_key,
+        )
+    )
+    db.add(
+        LedgerEntry(
+            campaign_id=campaign.id,
+            entry_type="creator_transfer",
+            amount_cents=-rate_cents,
+            reference_id=transfer_id,
+            metadata_json={**DEMO_META, "provider": "stripe"},
+        )
+    )
+    return deal
+
+
 def seed_demo_data(db: Session) -> dict[str, int]:
     """Populate realistic sample campaigns across all lifecycle stages."""
     clear_demo_data(db)
@@ -187,83 +296,78 @@ def seed_demo_data(db: Session) -> dict[str, int]:
             context="Demo creator discovery credits",
         )
     )
-    completed_deal = Deal(
-        campaign_id=completed.id,
-        creator_id=creators[0].id,
-        status=DealStatus.TRANSFERRED.value,
-        fit_score=81.0,
-        agreed_rate_cents=12_000,
-        compensation=_demo_compensation(12_000),
-        terms_accepted=True,
-        draft_approved=True,
-        final_approved=True,
-    )
-    db.add(completed_deal)
-    db.flush()
-    db.add_all(
-        [
-            DealMessage(
-                deal_id=completed_deal.id,
-                direction="outbound",
-                external_id="msg_demo_out_1",
-                provider_thread_id="thread_demo_summer",
-                body="Collaboration offer for Summer Glow Launch.",
-                intent="offer",
-            ),
-            DealMessage(
-                deal_id=completed_deal.id,
-                direction="inbound",
-                external_id="msg_demo_in_1",
-                provider_thread_id="thread_demo_summer",
-                body="ACCEPT — excited to partner!",
-                intent="accept",
-            ),
-        ]
-    )
-    deliverable = Deliverable(
-        deal_id=completed_deal.id,
-        caption="Loving this vitamin C glow #ad hugo.link/demo-summer",
-        media_url="https://media.example/demo-summer.jpg",
-        post_url="https://tiktok.com/@glowwithmia/video/demo",
-        stage="final",
-        qa_status="passed",
-    )
-    db.add(deliverable)
-    db.flush()
-    db.add_all(
-        [
-            QACheck(
-                deliverable_id=deliverable.id,
-                severity="major",
-                passed=False,
-                findings=[
-                    {
-                        "code": "missing_disclosure",
-                        "message": "FTC disclosure missing on draft.",
-                    }
-                ],
-                model="nvidia/nemotron-nano-12b-v2-vl",
-            ),
-            QACheck(
-                deliverable_id=deliverable.id,
-                severity="none",
-                passed=True,
-                findings=[],
-                model="nvidia/nemotron-nano-12b-v2-vl",
-            ),
-        ]
-    )
-    db.add(
-        Payout(
-            campaign_id=completed.id,
-            deal_id=completed_deal.id,
-            creator_id=creators[0].id,
-            amount_cents=12_000,
-            status="transferred",
-            stripe_transfer_id="tr_demo_summer_glow",
-            idempotency_key="demo-payout-summer-glow",
+    summer_rate = completed_strategy.target_rate_cents
+    summer_deals = [
+        (
+            creators[0],
+            81.0,
+            "summer_glow_mia",
+            "Collaboration offer for Summer Glow Launch.",
+            "ACCEPT — excited to partner!",
+            "Loving this vitamin C glow #ad hugo.link/demo-summer",
+            "https://media.example/demo-summer-mia.jpg",
+            "https://tiktok.com/@glowwithmia/video/demo",
+            "tr_demo_summer_glow_mia",
+            "demo-payout-summer-glow-mia",
+            True,
+        ),
+        (
+            creators[3],
+            75.0,
+            "summer_glow_sam",
+            "Summer Glow Launch — SPF-friendly vitamin C routine slot.",
+            "ACCEPT — perfect fit for my audience.",
+            "Morning SPF + vitamin C combo #ad hugo.link/demo-summer",
+            "https://media.example/demo-summer-sam.jpg",
+            "https://tiktok.com/@spfwithsam/video/demo",
+            "tr_demo_summer_glow_sam",
+            "demo-payout-summer-glow-sam",
+            False,
+        ),
+        (
+            creators[7],
+            71.0,
+            "summer_glow_lumen",
+            "Summer Glow Launch — glow routine creator offer.",
+            "ACCEPT — let's do it!",
+            "My glow routine with Lumina vitamin C #ad hugo.link/demo-summer",
+            "https://media.example/demo-summer-lumen.jpg",
+            "https://tiktok.com/@lumenglow/video/demo",
+            "tr_demo_summer_glow_lumen",
+            "demo-payout-summer-glow-lumen",
+            False,
+        ),
+        (
+            creators[9],
+            77.0,
+            "summer_glow_vibes",
+            "Summer Glow Launch — creator collaboration offer.",
+            "ACCEPT — rate works for me.",
+            "Vitamin C summer glow check #ad hugo.link/demo-summer",
+            "https://media.example/demo-summer-vibes.jpg",
+            "https://tiktok.com/@vitamincvibes/video/demo",
+            "tr_demo_summer_glow_vibes",
+            "demo-payout-summer-glow-vibes",
+            False,
+        ),
+    ]
+    for creator, fit_score, thread_key, offer_body, accept_body, caption, media_url, post_url, transfer_id, idempotency_key, include_failed_draft_qa in summer_deals:
+        _seed_transferred_deal(
+            db,
+            campaign=completed,
+            creator=creator,
+            rate_cents=summer_rate,
+            fit_score=fit_score,
+            thread_key=thread_key,
+            offer_body=offer_body,
+            accept_body=accept_body,
+            caption=caption,
+            media_url=media_url,
+            post_url=post_url,
+            transfer_id=transfer_id,
+            idempotency_key=idempotency_key,
+            include_failed_draft_qa=include_failed_draft_qa,
         )
-    )
     db.add_all(
         [
             LedgerEntry(
@@ -276,16 +380,9 @@ def seed_demo_data(db: Session) -> dict[str, int]:
             LedgerEntry(
                 campaign_id=completed.id,
                 entry_type="service_spend",
-                amount_cents=100,
+                amount_cents=-100,
                 reference_id="lsrq_demo_discovery",
                 metadata_json={**DEMO_META, "provider": "influencers.club"},
-            ),
-            LedgerEntry(
-                campaign_id=completed.id,
-                entry_type="payout",
-                amount_cents=12_000,
-                reference_id="tr_demo_summer_glow",
-                metadata_json={**DEMO_META, "provider": "stripe"},
             ),
         ]
     )
@@ -360,6 +457,24 @@ def seed_demo_data(db: Session) -> dict[str, int]:
             source_charge_id="ch_demo_hydration",
         )
     )
+    db.add(
+        LedgerEntry(
+            campaign_id=active.id,
+            entry_type="funding",
+            amount_cents=90_000,
+            reference_id="ch_demo_hydration",
+            metadata_json={**DEMO_META, "provider": "stripe"},
+        )
+    )
+    db.add(
+        ServiceSpend(
+            campaign_id=active.id,
+            provider="influencers.club",
+            amount_cents=100,
+            status="pending_approval",
+            context="Top up discovery credits for the next hydration creator batch",
+        )
+    )
     active_deals = [
         (creators[4], DealStatus.CONTACTED.value, 10_000, True, False),
         (creators[5], DealStatus.CONTRACTED.value, 11_000, True, True),
@@ -409,6 +524,16 @@ def seed_demo_data(db: Session) -> dict[str, int]:
                 qa_status="pending",
             )
             db.add(draft)
+    db.add(
+        Deal(
+            campaign_id=active.id,
+            creator_id=creators[1].id,
+            status=DealStatus.APPROVAL_PENDING.value,
+            fit_score=80.0,
+            agreed_rate_cents=10_000,
+            compensation=_demo_compensation(10_000),
+        )
+    )
     emit(db, active.id, "campaign.launched", {"demo_seed": True})
 
     funding_pending = Campaign(
