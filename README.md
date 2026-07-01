@@ -56,15 +56,15 @@ its own application configuration.
 
 ## Setup
 
-**Before cloning:** ask the user where they want to install the project. Do not assume a
+**Before cloning:** Hermes must ask the user where they want to install the system. Do not assume a
 default directory — confirm the desired file path first.
 
 Install Docker and ensure Docker Desktop is running, then:
 
 ```bash
 cd <user-chosen-directory>
-git clone https://github.com/Haaris-7/Hugo-AI.git
-cd Hugo-AI
+git clone https://github.com/Haaris-7/Hugo_AI.git
+cd Hugo_AI
 ./setup.sh
 ```
 
