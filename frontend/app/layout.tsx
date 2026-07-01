@@ -4,7 +4,7 @@ import { withBasePath } from "@/lib/base-path";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Hugo — Operator cockpit",
+  title: "Hugo — Operator dashboard",
   description: "Operate, approve, measure, and audit autonomous creator campaigns.",
   icons: {
     icon: withBasePath("/brand/hugo-icon.png"),

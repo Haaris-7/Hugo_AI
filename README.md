@@ -2,11 +2,16 @@
 
 Autonomous creator-marketing operations built for the Hermes, NVIDIA, and Stripe hackathon.
 Hugo uses live provider state: there is no demo mode, seeded workspace, or synthetic creator
-fallback.
+fallback unless you explicitly enable demo data in the setup wizard.
 
-## Why Hugo matters
+## What Hugo does
 
-Hugo demonstrates autonomous business operations at the intersection of three platforms:
+Hugo is an operator dashboard and policy-enforced control plane for end-to-end influencer
+campaigns. An operator defines a campaign; Hermes agents running in NVIDIA NemoClaw execute
+strategy, discovery, outreach, QA, payouts, and learning while Hugo enforces budgets, state
+transitions, and financial policy.
+
+The system is designed around three autonomous capabilities:
 
 **Agent earns** — Hermes sends approved fixed-price creator offers, records acceptance,
 and closes contracts via email without human intervention.
@@ -22,6 +27,32 @@ campaigns. Each completed campaign improves future strategy through PostgreSQL p
 **NemoClaw safety** — The agent sandbox enforces least-privilege egress. Hermes cannot
 access Stripe keys, Gmail tokens, or arbitrary endpoints. Every financial action flows
 through the policy-enforced FastAPI broker.
+
+## Tech stack
+
+| Layer | Technology |
+|---|---|
+| Operator UI | Next.js 15, React 19, Tailwind CSS, TanStack Query |
+| Control plane | FastAPI, SQLAlchemy, Alembic, PostgreSQL |
+| Agent runtime | Hermes on NVIDIA NemoClaw with Nemotron 3 Ultra |
+| Vision QA | NVIDIA NIM (Nemotron Nano vision) |
+| Payments | Stripe Checkout, Connect, webhooks, Stripe Link |
+| Email | Gmail OAuth API or Hermes-connected browser session |
+| Deployment | Docker Compose (`postgres`, `api`, `worker`, `frontend`) |
+
+## Prerequisites
+
+- **Docker Desktop** (includes Docker Compose v2)
+- **Hermes** with Nemotron 3 Ultra inside NemoClaw — see [nemo/README.md](nemo/README.md)
+- **NVIDIA API key** with access to Nemotron 3 Ultra and the vision model
+- **Stripe** account (test mode is fine) with Checkout, Connect, and webhook forwarding
+- **Creator email** via Gmail OAuth (unattended) or a Hermes-connected Gmail/Outlook browser session
+- **Stripe CLI** (recommended for local webhook forwarding)
+
+Creator discovery is not configured in the wizard. Hermes owns discovery through the
+`hugo-creator-discovery` skill: it tries influencers.club first, then falls back to web
+research when that provider is unavailable. Hugo never copies discovery credentials into
+its own application configuration.
 
 ## Setup
 
@@ -40,9 +71,11 @@ cd Hugo-AI
 If a previous install failed, run `./setup.sh --clean` first to wipe stale volumes.
 
 The script creates local service tokens, starts PostgreSQL, the API, the autonomous worker, and
-the Next.js cockpit, then opens [the setup wizard](http://localhost:3000/setup).
+the Next.js dashboard, then opens [the setup wizard](http://localhost:3000/setup).
 
-Configure these required integrations:
+### Setup wizard
+
+At [localhost:3000/setup](http://localhost:3000/setup), configure required integrations:
 
 - Hermes running Nemotron 3 Ultra inside NemoClaw
 - NVIDIA NIM vision
@@ -50,12 +83,28 @@ Configure these required integrations:
 - Creator email through either Gmail OAuth (unattended) or a Hermes-connected,
   signed-in Gmail/Outlook browser session
 
-Creator discovery is not configured in the wizard. Hermes owns discovery through the
-`hugo-creator-discovery` skill: it tries influencers.club first, then falls back to web
-research when that provider is unavailable. Hugo never copies discovery credentials into
-its own application configuration.
+Optional **demo data** seeds sample campaigns across lifecycle stages for exploration.
+Disable it to remove seeded data. Live provider calls still require valid credentials.
+
+After saving, click **Open dashboard** to enter the operator workspace.
 
 See [nemo/README.md](nemo/README.md) for the full Hermes + NemoClaw setup guide.
+
+## How to run
+
+| Command | Purpose |
+|---|---|
+| `./setup.sh` | Build, start, and open setup |
+| `./setup.sh --restart` | Rebuild and restart |
+| `./setup.sh --stop` | Stop the stack |
+| `./setup.sh --clean` | Stop and wipe database volumes |
+| `make start` | Start without rebuilding |
+| `make test` | Run backend tests |
+| `make lint` | Run static checks |
+| `scripts/dev.sh` | Local backend + frontend dev (after `scripts/bootstrap.sh`) |
+
+The dashboard runs at [localhost:3000](http://localhost:3000), and the API reference is available at
+[localhost:8000/docs](http://localhost:8000/docs).
 
 ## Autonomous operation
 
@@ -64,7 +113,7 @@ New campaigns default to full autonomy. After an operator creates a campaign, Hu
 1. Generates and approves a policy-bounded strategy.
 2. Creates the Stripe funding session and waits for the signed funding webhook.
 3. Launches agent-managed creator discovery after funding settles.
-4. Sends the complete deal by email and displays that exact message in the cockpit.
+4. Sends the complete deal by email and displays that exact message in the dashboard.
 5. Polls Gmail on a recurring worker schedule, records fixed-offer responses, and stores email
    acceptance as the agreement.
 6. Sends Stripe-hosted recipient onboarding and accepts draft/final links by email.
@@ -101,16 +150,42 @@ For local development, forward Stripe events to Hugo with the Stripe CLI:
 Offline tests mock `stripe.Webhook.construct_event` intentionally. Production and Docker
 deployments use real signature verification with your configured webhook secret.
 
-## Commands
+## Project structure
 
-| Command | Purpose |
+```
+.
+├── backend/hugo/          # FastAPI control plane, worker, domain logic
+├── frontend/              # Next.js operator dashboard
+│   └── app/
+│       ├── (dashboard)/   # Overview, campaigns, finance, learning, system
+│       └── setup/         # First-run integration wizard
+├── hermes-plugin/hugo-ops/  # Policy-enforced Hermes tools
+├── hermes-skills/         # Hermes skill definitions (strategy, discovery, cron, …)
+├── nemo/                  # NemoClaw network policy and Hermes setup guide
+├── alembic/               # Database migrations
+├── docker-compose.yml     # Postgres, API, worker, frontend
+└── setup.sh               # One-command bootstrap
+```
+
+## Hermes integration
+
+Hugo exposes lifecycle tools through the `hugo-ops` Hermes plugin. Agents call the FastAPI
+broker; the broker enforces campaign state, budgets, and idempotency before touching Stripe,
+Gmail, or NVIDIA.
+
+Key skills (install into the Hermes sandbox — see [nemo/README.md](nemo/README.md)):
+
+| Skill | Purpose |
 |---|---|
-| `./setup.sh` | Build, start, and open setup |
-| `./setup.sh --restart` | Rebuild and restart |
-| `./setup.sh --stop` | Stop the stack |
-| `./setup.sh --clean` | Stop and wipe database volumes |
-| `make test` | Run backend tests |
-| `make lint` | Run static checks |
+| `hugo-strategy-engine` | Budget-safe campaign strategy |
+| `hugo-creator-discovery` | Creator discovery (influencers.club + research fallback) |
+| `hugo-outreach` | Fixed-offer email outreach and creator responses |
+| `hugo-browser-email` | Gmail/Outlook delivery through a connected browser session |
+| `hugo-performance-learning` | Post-campaign learning |
+| `hugo-cron-orchestration` | Minute cron loop for durable tasks |
+| `hugo-platform-intelligence` | Platform playbook research |
 
-The cockpit runs at [localhost:3000](http://localhost:3000), and the API reference is available at
-[localhost:8000/docs](http://localhost:8000/docs).
+Partner skills: `official/payments/stripe-link-cli` and NVIDIA NemoClaw skills.
+
+The **System** page in the dashboard shows service health, Hermes task queue status, and
+live probes for Nemotron round-trips.

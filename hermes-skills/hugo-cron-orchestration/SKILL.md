@@ -51,6 +51,6 @@ during `enqueue_hermes_task`.
 ## Error handling
 
 - If a tool call raises an error, call `hugo_fail_task` with the error message.
-- Failed tasks are visible in the cockpit and preflight counts.
+- Failed tasks are visible in the dashboard and preflight counts.
 - Do not retry failed tasks in the same cron cycle; they will be addressed in
   subsequent runs or by operator intervention.

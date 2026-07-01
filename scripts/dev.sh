@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # Run the Hugo backend (and frontend, if Node is available) locally for development.
-# Backend: http://127.0.0.1:8000  ·  Cockpit: http://localhost:3000
+# Backend: http://127.0.0.1:8000  ·  Dashboard: http://localhost:3000
 #
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -19,11 +19,11 @@ echo "▶ Backend → http://127.0.0.1:8000  (docs at /docs)"
 pids+=($!)
 
 if command -v npm >/dev/null && [ -d frontend/node_modules ]; then
-  echo "▶ Cockpit → http://localhost:3000"
+  echo "▶ Dashboard → http://localhost:3000"
   ( cd frontend && npm run dev ) &
   pids+=($!)
 else
-  echo "⚠ Frontend not started (no node_modules). Use 'make up' for the dockerized cockpit."
+  echo "⚠ Frontend not started (no node_modules). Use 'make up' for the dockerized dashboard."
 fi
 
 wait

@@ -194,7 +194,6 @@ def test_double_payout_release_is_idempotent():
         assert payout.status == "transferred"
         first_transfer = payout.stripe_transfer_id
 
-        # A second release must be a no-op: same transfer id, single ledger entry.
         request_payout(db, payout, providers, settings)
         assert payout.stripe_transfer_id == first_transfer
 

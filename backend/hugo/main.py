@@ -578,7 +578,7 @@ async def live_probe(
                     "latency_ms": round((time.perf_counter() - start) * 1000),
                 }
             )
-        except Exception as exc:  # noqa: BLE001 - surface the failure to the operator
+        except Exception as exc:  # noqa: BLE001
             result["hermes"].update({"ok": False, "error": str(exc)[:200]})
     else:
         result["hermes"]["note"] = "Hermes is not configured. Complete the setup wizard."
@@ -671,7 +671,7 @@ async def system_setup_test(
                         entry["reachable"] = providers.mail.probe()["ok"]
                 else:
                     entry["reachable"] = info["credentials_present"]
-            except Exception as exc:  # noqa: BLE001 - report, don't raise
+            except Exception as exc:  # noqa: BLE001
                 entry["reachable"] = False
                 entry["error"] = str(exc)[:160]
         elif info["resolved"] == "agent_managed":
@@ -1194,11 +1194,6 @@ async def agent_learning_commit(
         "skill_version": skill.version if skill else learning.skill_version,
         "patch_status": learning.patch_status,
     }
-
-
-# ---------------------------------------------------------------------------
-# Hermes task endpoints (durable cron orchestration)
-# ---------------------------------------------------------------------------
 
 
 @internal.post("/poll_emails")

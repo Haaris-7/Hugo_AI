@@ -176,7 +176,7 @@ With this flag:
 2. Save all required credentials and run **Test connections**
 3. Open System page: `http://localhost:3000/system`
 4. Click **Run live probe** — confirm Nemotron round-trip succeeds
-5. Create a campaign in the cockpit
+5. Create a campaign in the dashboard
 6. Watch System → **Hermes task queue** for pending/claimed tasks
 7. Confirm tasks move from pending → claimed → completed
 
@@ -215,7 +215,7 @@ Restart Hugo after updating `.env`.
 stripe trigger checkout.session.completed
 ```
 
-Or complete a real Checkout session from the cockpit funding button.
+Or complete a real Checkout session from the dashboard funding button.
 
 ## Troubleshooting
 

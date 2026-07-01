@@ -12,7 +12,7 @@
 #   5. Opens the setup wizard in your browser
 #
 # After you configure the live integrations in the wizard, click
-# "Open the cockpit" to start using Hugo.
+# "Open the dashboard" to start using Hugo.
 #
 # Options:
 #   --stop     Stop the running stack
@@ -45,7 +45,7 @@ for arg in "$@"; do
       log "Restarting Hugo (rebuild)"
       docker compose down
       docker compose up --build -d
-      ok "Restarted — cockpit at http://localhost:3000"
+      ok "Restarted — dashboard at http://localhost:3000"
       exit 0
       ;;
     --clean)
@@ -117,7 +117,7 @@ wait_for() {
 }
 
 wait_for "API"      "http://localhost:8000/health"
-wait_for "Cockpit"  "http://localhost:3000"
+wait_for "Dashboard"  "http://localhost:3000"
 
 # ── 5. Open the setup wizard ────────────────────────────────────────────────
 echo ""
@@ -125,7 +125,7 @@ printf "${GREEN}━━━━━━━━━━━━━━━━━━━━━�
 printf "${GREEN}  Hugo is running!${RESET}\n"
 echo ""
 printf "  Setup wizard:  ${CYAN}http://localhost:3000/setup${RESET}\n"
-printf "  Cockpit:       ${CYAN}http://localhost:3000${RESET}\n"
+printf "  Dashboard:     ${CYAN}http://localhost:3000${RESET}\n"
 printf "  API docs:      ${CYAN}http://localhost:8000/docs${RESET}\n"
 echo ""
 printf "  Configure the live integrations in the setup wizard.\n"

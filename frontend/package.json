@@ -1,5 +1,5 @@
 {
-  "name": "hugo-operator-cockpit",
+  "name": "hugo-operator-dashboard",
   "version": "0.1.0",
   "private": true,
   "scripts": {

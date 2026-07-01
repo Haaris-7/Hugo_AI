@@ -210,7 +210,7 @@ export default function SetupPage() {
           <div>
             <h2 className="text-[17px] font-semibold">Demo data</h2>
             <p className="mt-1 max-w-[52ch] text-sm leading-5 text-[#526360]">
-              Seed demo campaigns — Populates the cockpit with realistic sample data across all lifecycle stages. Disable to remove.
+              Seed demo campaigns — Populates the dashboard with realistic sample data across all lifecycle stages. Disable to remove.
             </p>
           </div>
           <label className="inline-flex min-h-11 cursor-pointer items-center gap-3 rounded-[6px] border border-[#c5d1d0] px-4">
@@ -354,7 +354,7 @@ export default function SetupPage() {
         <span className="flex items-center gap-2 text-sm"><ShieldCheck className="h-4 w-4 text-[#76d1cc]" />Secrets stay in the shared server environment.</span>
         <div className="flex gap-2"><button type="button" disabled={busy} onClick={() => handleSave(true)} className="min-h-11 rounded-[6px] border border-white/30 px-4 text-sm font-semibold hover:bg-white/10 disabled:opacity-50">Test connections</button><button type="button" disabled={busy} onClick={() => handleSave(false)} className="inline-flex min-h-11 items-center gap-2 rounded-[6px] bg-[#019393] px-4 text-sm font-semibold text-[#001918] hover:bg-[#27aaa9] disabled:opacity-50">{busy && <LoaderCircle className="h-4 w-4 animate-spin" />}{saved ? "Saved" : "Save configuration"}</button></div>
       </div>
-      {saved && summary?.validation.ok && <div role="status" aria-live="polite" className="mt-5 flex items-center justify-between gap-4 rounded-[8px] border border-[#b5dbce] bg-[#edf8f3] p-4"><p className="text-sm text-[#126448]">Live services are configured. The worker will begin autonomous polling.</p><Link href="/" className="font-semibold text-[#006e6e]">Open cockpit →</Link></div>}
+      {saved && summary?.validation.ok && <div role="status" aria-live="polite" className="mt-5 flex items-center justify-between gap-4 rounded-[8px] border border-[#b5dbce] bg-[#edf8f3] p-4"><p className="text-sm text-[#126448]">Live services are configured. The worker will begin autonomous polling.</p><Link href="/" className="font-semibold text-[#006e6e]">Open dashboard →</Link></div>}
     </main>
   );
 }

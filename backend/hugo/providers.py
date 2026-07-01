@@ -265,7 +265,6 @@ class VisionProvider:
         if not media_url:
             raise ValueError("A media URL is required for NVIDIA vision QA")
 
-        # Text-policy checks run alongside the live vision verdict.
         findings: list[dict[str, Any]] = []
         lowered = caption.lower()
         if "#ad" not in lowered and "sponsored" not in lowered:

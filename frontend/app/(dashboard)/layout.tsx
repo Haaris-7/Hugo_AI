@@ -1,5 +1,5 @@
 import { AppShell } from "@/components/app-shell";
 
-export default function CockpitLayout({ children }: { children: React.ReactNode }) {
+export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return <AppShell>{children}</AppShell>;
 }

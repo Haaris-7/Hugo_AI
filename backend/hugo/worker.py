@@ -73,8 +73,6 @@ def main() -> None:
             if not run_once():
                 time.sleep(max(2, settings.automation_poll_seconds))
         except RuntimeError:
-            # The worker starts with the stack and waits until the setup wizard
-            # has persisted a complete configuration to the shared .env file.
             get_settings.cache_clear()
             time.sleep(5)
 

@@ -75,7 +75,6 @@ def write_env(updates: dict[str, str], path: Path = ENV_PATH) -> None:
     try:
         temporary.replace(path)
     except OSError:
-        # Bind-mounted files can't be atomically replaced; write in-place
         path.write_text(temporary.read_text())
         temporary.unlink(missing_ok=True)
     path.chmod(0o600)

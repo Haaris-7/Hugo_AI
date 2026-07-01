@@ -279,8 +279,6 @@ def generate_strategy(db: Session, campaign: Campaign, providers: Providers) -> 
     primary_allocation = 0.8 if target >= 4 and campaign.budget_cents >= 100_000 else 1.0
     challenger_allocation = 1 - primary_allocation
 
-    # Let the algorithm playbook visibly bias the recommendation so platform
-    # intelligence drives strategy, not just decorates it.
     playbook_signal = ""
     if playbook.signals:
         first = playbook.signals[0]
@@ -1494,9 +1492,6 @@ def request_payout(
     deal = must_get(db, Deal, payout.deal_id)
     campaign = deal.campaign
     funding = db.scalar(select(FundingPayment).where(FundingPayment.campaign_id == campaign.id))
-    # Rows created before compensation snapshots/QA stages existed have neither
-    # marker. Their historical VERIFIED status remains the migration-safe proof;
-    # every API-created campaign has a compensation snapshot and must use final QA.
     qa_verified = (
         deal.final_approved or campaign.qa_mode == "legacy" or not bool(campaign.compensation)
     )
@@ -1900,9 +1895,6 @@ def build_learning_dossier(db: Session, campaign: Campaign) -> dict[str, Any]:
     else:
         result_value = campaign.actual_views or campaign.actual_engagements or 1
     cpr = total_cost_cents / 100 / result_value
-    # Cap each evidence category so very large campaigns can't produce an unbounded
-    # dossier (and an unbounded prompt). The identifiers are bounded, deterministic
-    # samples; the full records remain queryable in PostgreSQL.
     per_category = MAX_EVIDENCE_PER_CATEGORY
     evidence_ids = [f"campaign:{campaign.id}", f"run:{campaign.run_id}"]
     evidence_ids.extend(f"deal:{deal.id}" for deal in list(campaign.deals)[:per_category])
@@ -2503,11 +2495,6 @@ def _campaign_next_action(
     if campaign.status == CampaignStatus.COMPLETED.value:
         return "review_learning"
     return "monitor"
-
-
-# ---------------------------------------------------------------------------
-# Hermes task management (durable work items for cron orchestration)
-# ---------------------------------------------------------------------------
 
 
 def enqueue_hermes_task(

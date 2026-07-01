@@ -134,7 +134,6 @@ def seed_demo_data(db: Session) -> dict[str, int]:
 
     campaigns_created = 0
 
-    # Completed campaign with full metrics, learning, and payouts
     completed = Campaign(
         brand_id=brand.id,
         name="Summer Glow Launch (demo)",
@@ -323,7 +322,6 @@ def seed_demo_data(db: Session) -> dict[str, int]:
     emit(db, completed.id, "campaign.funded", {"charge_id": "ch_demo_summer_glow"})
     emit(db, completed.id, "campaign_run_closed", {"views": 248_500})
 
-    # Active campaign with deals in contacted, contracted, and QA stages
     active = Campaign(
         brand_id=brand.id,
         name="Hydration Series (demo)",
@@ -413,7 +411,6 @@ def seed_demo_data(db: Session) -> dict[str, int]:
             db.add(draft)
     emit(db, active.id, "campaign.launched", {"demo_seed": True})
 
-    # Awaiting funding with approved strategy
     funding_pending = Campaign(
         brand_id=brand.id,
         name="SPF Campaign (demo)",
@@ -444,7 +441,6 @@ def seed_demo_data(db: Session) -> dict[str, int]:
     )
     emit(db, funding_pending.id, "strategy.approved", {"demo_seed": True})
 
-    # Strategy pending
     strategy_pending = Campaign(
         brand_id=brand.id,
         name="Fall Collection Teaser (demo)",
@@ -471,7 +467,6 @@ def seed_demo_data(db: Session) -> dict[str, int]:
         )
     )
 
-    # Draft
     draft = Campaign(
         brand_id=brand.id,
         name="Holiday Gift Guide (demo)",
@@ -579,7 +574,6 @@ def clear_demo_data(db: Session) -> dict[str, int]:
             SkillVersion.content_hash == "demo_seed_hash",
         )
     )
-    # Remove demo-tagged playbooks
     playbooks = db.scalars(select(AlgorithmPlaybook)).all()
     for playbook in playbooks:
         if any(source.get("demo_seed") for source in playbook.sources if isinstance(source, dict)):
