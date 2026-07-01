@@ -2,28 +2,31 @@ import json
 import os
 from pathlib import Path
 
-TEST_DB = Path("/tmp/argo-ai-test.db")
+TEST_DB = Path("/tmp/hugo-ai-test.db")
 TEST_DB.unlink(missing_ok=True)
 
-os.environ.update({
-    "ARGO_ENV": "test",
-    "ARGO_DATABASE_URL": f"sqlite:///{TEST_DB}",
-    "ARGO_INLINE_JOBS": "true",
-    "ARGO_API_TOKEN": "test-api-token",
-    "ARGO_AGENT_TOKEN": "test-agent-token",
-    "ARGO_HERMES_API_KEY": "test-hermes-token",
-    "ARGO_NVIDIA_API_KEY": "test-nvidia-token",
-    "ARGO_STRIPE_SECRET_KEY": "sk_test_local",
-    "ARGO_STRIPE_WEBHOOK_SECRET": "whsec_test_local",
-    "ARGO_GMAIL_ACCESS_TOKEN": "test-gmail-token",
-    "ARGO_GMAIL_SENDER": "operator@example.test",
-})
+os.environ.update(
+    {
+        "HUGO_ENV": "test",
+        "HUGO_DATABASE_URL": f"sqlite:///{TEST_DB}",
+        "HUGO_INLINE_JOBS": "true",
+        "HUGO_DEMO_MODE": "false",
+        "HUGO_API_TOKEN": "test-api-token",
+        "HUGO_AGENT_TOKEN": "test-agent-token",
+        "HUGO_HERMES_API_KEY": "test-hermes-token",
+        "HUGO_NVIDIA_API_KEY": "test-nvidia-token",
+        "HUGO_STRIPE_SECRET_KEY": "sk_test_local",
+        "HUGO_STRIPE_WEBHOOK_SECRET": "whsec_test_local",
+        "HUGO_GMAIL_ACCESS_TOKEN": "test-gmail-token",
+        "HUGO_GMAIL_SENDER": "operator@example.test",
+    }
+)
 
 import httpx  # noqa: E402
 import pytest  # noqa: E402
-from argo.db import Base, engine  # noqa: E402
-from argo.main import app  # noqa: E402
-from argo.providers import (  # noqa: E402
+from hugo.db import Base, engine  # noqa: E402
+from hugo.main import app  # noqa: E402
+from hugo.providers import (  # noqa: E402
     FundingResult,
     HermesProvider,
     MailProvider,
@@ -32,7 +35,7 @@ from argo.providers import (  # noqa: E402
     TransferResult,
     VisionProvider,
 )
-from argo.schemas import (  # noqa: E402
+from hugo.schemas import (  # noqa: E402
     DiscoveryCandidate,
     HermesLearning,
     HermesStrategy,
@@ -64,10 +67,12 @@ def isolated_provider_contracts(monkeypatch):
             target_rate_cents=rate,
             rationale="Test contract uses budget-safe micro creators.",
             projected_cost_per_result=0.025,
-            compensation_components=[{
-                "kind": "affiliate" if affiliate else "base",
-                "rate_cents": rate,
-            }],
+            compensation_components=[
+                {
+                    "kind": "affiliate" if affiliate else "base",
+                    "rate_cents": rate,
+                }
+            ],
         )
 
     monkeypatch.setattr(HermesProvider, "strategy", strategy)
@@ -77,7 +82,7 @@ def isolated_provider_contracts(monkeypatch):
         lambda self, dossier: HermesLearning(
             summary="Stored evidence-backed learning.",
             heuristic="Prefer reliable creators.",
-            skill_name="argo-strategy-engine",
+            skill_name="hugo-strategy-engine",
             evidence_ids=list(dossier.get("evidence_ids", [])),
             governance={"risk": "low", "generator": "nvidia/skill-card-generator"},
         ),
@@ -87,7 +92,7 @@ def isolated_provider_contracts(monkeypatch):
         "outreach",
         lambda self, context: (
             f"Deal for {context['campaign_name']}: ${context['rate_cents'] / 100:.2f}. "
-            "Reply ACCEPT, counter with a rate, or decline."
+            "The compensation is fixed. Reply ACCEPT or DECLINE."
         ),
     )
     monkeypatch.setattr(
@@ -114,7 +119,7 @@ def isolated_provider_contracts(monkeypatch):
         findings = []
         if "#ad" not in caption.lower() and "sponsored" not in caption.lower():
             findings.append({"code": "missing_disclosure", "message": "Disclosure missing"})
-        if "argo.link/" not in caption.lower():
+        if "hugo.link/" not in caption.lower():
             findings.append({"code": "missing_tracking_link", "message": "Tracking link missing"})
         if media_url and "wrong-product" in media_url:
             findings.append({"code": "wrong_product", "message": "Wrong product"})
@@ -126,7 +131,11 @@ def isolated_provider_contracts(monkeypatch):
         )
 
     monkeypatch.setattr(VisionProvider, "verify", verify)
-    monkeypatch.setattr(VisionProvider, "probe", lambda self: {"ok": True, "model": "test-vision-contract"})
+    monkeypatch.setattr(
+        VisionProvider,
+        "probe",
+        lambda self: {"ok": True, "model": "test-vision-contract"},
+    )
     monkeypatch.setattr(
         PaymentProvider,
         "create_funding_session",

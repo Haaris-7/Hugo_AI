@@ -1,7 +1,7 @@
 import pytest
-from argo.config import get_settings
-from argo.db import SessionLocal
-from argo.models import (
+from hugo.config import get_settings
+from hugo.db import SessionLocal
+from hugo.models import (
     Brand,
     Campaign,
     CampaignStatus,
@@ -13,9 +13,9 @@ from argo.models import (
     FundingPayment,
     Payout,
 )
-from argo.providers import build_providers
-from argo.schemas import MetricsCreate
-from argo.services import record_metrics_and_close
+from hugo.providers import build_providers
+from hugo.schemas import MetricsCreate
+from hugo.services import record_metrics_and_close
 from sqlalchemy import select
 
 

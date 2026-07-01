@@ -88,6 +88,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen bg-[#f5f7f7] lg:grid lg:grid-cols-[236px_minmax(0,1fr)]">
+      <a href="#main-content" className="fixed left-4 top-3 z-[60] -translate-y-20 rounded-[6px] bg-[#10211f] px-4 py-2 text-sm font-semibold text-white transition-transform focus:translate-y-0">
+        Skip to main content
+      </a>
       <header className="fixed inset-x-0 top-0 z-30 flex h-16 items-center justify-between border-b border-[#dce4e3] bg-white/95 px-4 lg:hidden">
         <button ref={menuButtonRef} onClick={() => setOpen(true)} className="grid h-11 w-11 place-items-center rounded-[6px] hover:bg-[#eef2f2]" aria-label="Open navigation">
           <Menu className="h-5 w-5" />
@@ -143,11 +146,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
 
-      <main className="min-w-0 px-4 pb-16 pt-24 sm:px-7 lg:px-9 lg:pt-7 xl:px-12">
+      <main id="main-content" tabIndex={-1} className="min-w-0 px-4 pb-16 pt-24 sm:px-7 lg:px-9 lg:pt-7 xl:px-12">
         <div className="page-enter mx-auto max-w-[1540px]">
           <div className="mb-6 hidden items-center justify-between lg:flex">
             <p className="text-xs font-medium text-[#687975]">Hugo / <span className="text-[#354542]">{activeLabel}</span></p>
-            <span className="flex items-center gap-2 text-xs text-[#687975]"><span className="h-1.5 w-1.5 rounded-full bg-[#019393]" />Live data · auto-refresh</span>
+            <span className="flex items-center gap-2 text-xs text-[#687975]"><span className="h-1.5 w-1.5 rounded-full bg-[#019393]" />Live data · refreshes every 3–5 sec</span>
           </div>
           {children}
         </div>

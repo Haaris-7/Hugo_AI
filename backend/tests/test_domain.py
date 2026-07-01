@@ -1,5 +1,5 @@
 import pytest
-from argo.domain import payout_amount, weighted_fit_score
+from hugo.domain import payout_amount, weighted_fit_score
 
 
 def test_weighted_fit_score_is_bounded_by_inputs():

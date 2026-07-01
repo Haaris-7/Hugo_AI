@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "argo-ai-backend"
+name = "hugo-ai-backend"
 version = "0.1.0"
 description = "Hackathon backend for an autonomous, self-improving creator marketing agent"
 requires-python = ">=3.10"
@@ -28,7 +28,7 @@ dev = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["backend/argo"]
+packages = ["backend/hugo"]
 
 [tool.pytest.ini_options]
 testpaths = ["backend/tests"]

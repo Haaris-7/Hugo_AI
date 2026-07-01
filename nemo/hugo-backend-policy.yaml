@@ -1,0 +1,46 @@
+preset:
+  name: hugo-backend
+  description: >-
+    Least-privilege egress for the Hugo Hermes sandbox: the policy-enforced internal
+    broker, NVIDIA inference, and the Stripe Link CLI's hosts only. General egress is
+    denied by default; Stripe server keys, Gmail tokens, and discovery keys stay in
+    FastAPI and never enter the sandbox.
+network_policies:
+  hugo-backend:
+    name: hugo-backend
+    endpoints:
+      # Hugo's authoritative broker. Every money gate and state transition is
+      # enforced here; Hermes holds only the scoped HUGO_AGENT_TOKEN.
+      - host: host.docker.internal
+        port: 8000
+        protocol: rest
+        enforcement: enforce
+        rules:
+          - allow: { method: GET, path: "/internal/agent/**" }
+          - allow: { method: POST, path: "/internal/agent/**" }
+      # NVIDIA inference for the Nemotron 3 Ultra brain and NIM vision QA.
+      - host: integrate.api.nvidia.com
+        port: 443
+        protocol: rest
+        enforcement: enforce
+        rules:
+          - allow: { method: POST, path: "/v1/**" }
+      # Stripe Link CLI hosts — used only for operator-approved service spend.
+      # The Link skill cannot self-approve; the operator gates each purchase.
+      - host: api.stripe.com
+        port: 443
+        protocol: rest
+        enforcement: enforce
+        rules:
+          - allow: { method: GET, path: "/**" }
+          - allow: { method: POST, path: "/**" }
+      - host: link.stripe.com
+        port: 443
+        protocol: rest
+        enforcement: enforce
+        rules:
+          - allow: { method: GET, path: "/**" }
+          - allow: { method: POST, path: "/**" }
+    binaries:
+      - { path: /opt/hermes/.venv/bin/python }
+

@@ -8,7 +8,7 @@ fallback.
 
 Hugo demonstrates autonomous business operations at the intersection of three platforms:
 
-**Agent earns** — Hermes negotiates creator deals within budget caps, manages rate counters,
+**Agent earns** — Hermes sends approved fixed-price creator offers, records acceptance,
 and closes contracts via email without human intervention.
 
 **Agent spends** — The Stripe Link skill lets the agent purchase service credits (discovery
@@ -32,8 +32,8 @@ Install Docker and ensure Docker Desktop is running, then:
 
 ```bash
 cd <user-chosen-directory>
-git clone https://github.com/Haaris-7/Argo-AI.git
-cd Argo-AI
+git clone https://github.com/Haaris-7/Hugo-AI.git
+cd Hugo-AI
 ./setup.sh
 ```
 
@@ -47,10 +47,11 @@ Configure these required integrations:
 - Hermes running Nemotron 3 Ultra inside NemoClaw
 - NVIDIA NIM vision
 - Stripe Checkout, webhooks, and Connect
-- Gmail OAuth with a refresh token and sender address
+- Creator email through either Gmail OAuth (unattended) or a Hermes-connected,
+  signed-in Gmail/Outlook browser session
 
 Creator discovery is not configured in the wizard. Hermes owns discovery through the
-`argo-creator-discovery` skill: it tries influencers.club first, then falls back to web
+`hugo-creator-discovery` skill: it tries influencers.club first, then falls back to web
 research when that provider is unavailable. Hugo never copies discovery credentials into
 its own application configuration.
 
@@ -64,17 +65,17 @@ New campaigns default to full autonomy. After an operator creates a campaign, Hu
 2. Creates the Stripe funding session and waits for the signed funding webhook.
 3. Launches agent-managed creator discovery after funding settles.
 4. Sends the complete deal by email and displays that exact message in the cockpit.
-5. Polls Gmail on a recurring worker schedule, negotiates within campaign caps, and records email
+5. Polls Gmail on a recurring worker schedule, records fixed-offer responses, and stores email
    acceptance as the agreement.
 6. Sends Stripe-hosted recipient onboarding and accepts draft/final links by email.
 7. Runs NVIDIA QA, emails revision feedback, releases eligible payouts, measures results, and
    updates learning state.
 
-When Hermes cron is active (`ARGO_HERMES_CRON_ACTIVE=true`), the Python worker handles
+When Hermes cron is active (`HUGO_HERMES_CRON_ACTIVE=true`), the Python worker handles
 outbox jobs (learning, metrics, notifications) and email polling, while Hermes owns
 lifecycle orchestration through the durable task queue.
 
-There is intentionally no creator-side Hugo UI. Creator negotiation, acceptance, submission, QA
+There is intentionally no creator-side Hugo UI. Creator acceptance, submission, QA
 feedback, and status updates stay in the email thread; Stripe's hosted onboarding remains external.
 
 ## Stripe webhook forwarding (development)
@@ -89,7 +90,7 @@ For local development, forward Stripe events to Hugo with the Stripe CLI:
    ```
 4. Copy the webhook signing secret (`whsec_...`) printed by the CLI into your `.env`:
    ```
-   ARGO_STRIPE_WEBHOOK_SECRET=whsec_...
+   HUGO_STRIPE_WEBHOOK_SECRET=whsec_...
    ```
 5. Restart the API after updating `.env`, or save the secret through the setup wizard.
 6. Trigger a test event in another terminal:

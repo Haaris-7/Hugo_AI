@@ -26,7 +26,7 @@ const schema = z.object({
     "strategy_creators_payments",
     "full_autonomy",
   ]),
-  argo_pricing: z.boolean(),
+  hugo_pricing: z.boolean(),
   base_enabled: z.boolean(),
   base_rate: z.coerce.number().min(0),
   cpm_enabled: z.boolean(),
@@ -36,8 +36,6 @@ const schema = z.object({
   affiliate_enabled: z.boolean(),
   affiliate_rate: z.coerce.number().min(0),
   measurement_window_hours: z.coerce.number().min(1).max(720),
-  escalation_enabled: z.boolean(),
-  max_escalation_percent: z.coerce.number().min(0).max(10),
   skill_patch: z.boolean(),
 }).refine((data) => data.brand_id || data.new_brand_name.trim(), {
   message: "Choose or create a brand",
@@ -45,7 +43,7 @@ const schema = z.object({
 }).refine((data) => data.creator_cap <= data.budget, {
   message: "Creator cap cannot exceed budget",
   path: ["creator_cap"],
-}).refine((data) => data.argo_pricing || [data.base_enabled, data.cpm_enabled, data.engagement_enabled, data.affiliate_enabled].some(Boolean), {
+}).refine((data) => data.hugo_pricing || [data.base_enabled, data.cpm_enabled, data.engagement_enabled, data.affiliate_enabled].some(Boolean), {
   message: "Choose at least one component or let Hermes price it",
   path: ["base_enabled"],
 });
@@ -65,15 +63,14 @@ export function CampaignForm() {
     defaultValues: {
       brand_id: "", new_brand_name: "", niche: "fitness", name: "", goal: "",
       platform: "tiktok", budget: 600, creator_cap: 150,
-      operation_mode: "full_autonomy", argo_pricing: true,
+      operation_mode: "full_autonomy", hugo_pricing: true,
       base_enabled: true, base_rate: 150, cpm_enabled: false, cpm_rate: 15,
       engagement_enabled: false, engagement_rate: 25,
       affiliate_enabled: false, affiliate_rate: 10,
-      measurement_window_hours: 72, escalation_enabled: true,
-      max_escalation_percent: 10, skill_patch: false,
+      measurement_window_hours: 72, skill_patch: false,
     },
   });
-  const argoPricing = form.watch("argo_pricing");
+  const hugoPricing = form.watch("hugo_pricing");
   const mutation = useMutation({
     mutationFn: async (values: FormValues) => {
       let brandId = values.brand_id;
@@ -102,14 +99,8 @@ export function CampaignForm() {
           platform: values.platform,
           budget_cents: Math.round(values.budget * 100),
           per_creator_cap_cents: Math.round(values.creator_cap * 100),
-          compensation: values.argo_pricing ? null : { pricing_mode: "user", components },
+          compensation: values.hugo_pricing ? null : { pricing_mode: "user", components },
           operation_mode: values.operation_mode,
-          negotiation_policy: {
-            escalation_enabled: values.escalation_enabled,
-            max_escalation_percent: values.max_escalation_percent,
-            persuasion_attempts: 2,
-            replacement_limit: 3,
-          },
           measurement_window_hours: values.measurement_window_hours,
           learning_mode: values.skill_patch ? "database_and_skill_patch" : "database",
         }),
@@ -145,8 +136,8 @@ export function CampaignForm() {
             <label><span className={label}>Budget (USD)</span><input type="number" {...form.register("budget")} className={field} /></label>
             <label><span className={label}>Per creator cap</span><input type="number" {...form.register("creator_cap")} className={field} />{error("creator_cap") && <small className="mt-1 block text-[#b42318]">{error("creator_cap")}</small>}</label>
           </div>
-          <label className="mt-5 flex min-h-14 gap-3 rounded-[8px] border border-[#dce4e3] bg-white p-4"><input type="checkbox" {...form.register("argo_pricing")} /><span><strong>Let Hermes propose pricing</strong><span className="block text-sm text-[#526360]">The mix and rates appear in strategy preview and lock at approval.</span></span></label>
-          {!argoPricing && <div className="mt-5 grid gap-3 sm:grid-cols-2">
+          <label className="mt-5 flex min-h-14 gap-3 rounded-[8px] border border-[#dce4e3] bg-white p-4"><input type="checkbox" {...form.register("hugo_pricing")} /><span><strong>Let Hermes propose pricing</strong><span className="block text-sm text-[#526360]">The mix and rates appear in strategy preview and lock at approval.</span></span></label>
+          {!hugoPricing && <div className="mt-5 grid gap-3 sm:grid-cols-2">
             <ComponentField form={form} enabled="base_enabled" rate="base_rate" title="Base / verified post" />
             <ComponentField form={form} enabled="cpm_enabled" rate="cpm_rate" title="CPM / 1,000 views" />
             <ComponentField form={form} enabled="engagement_enabled" rate="engagement_rate" title="Per 1,000 engagements" />
@@ -156,12 +147,10 @@ export function CampaignForm() {
         </section>
 
         <section className="border-t border-[#dce4e3] pt-8">
-          <h2 className="text-lg font-semibold">Measurement and negotiation</h2>
-          <div className="mt-5 grid gap-5 sm:grid-cols-2">
+          <h2 className="text-lg font-semibold">Measurement</h2>
+          <div className="mt-5 grid gap-5">
             <label><span className={label}>Measurement window (hours)</span><input type="number" {...form.register("measurement_window_hours")} className={field} /></label>
-            <label><span className={label}>Max escalation (%)</span><input type="number" {...form.register("max_escalation_percent")} className={field} disabled={!form.watch("escalation_enabled")} /></label>
           </div>
-          <label className="mt-4 flex items-start gap-3 text-sm"><input className="mt-1" type="checkbox" {...form.register("escalation_enabled")} /><span>Allow one operator escalation after Hermes defends the locked terms twice. Rejection makes the original offer final.</span></label>
         </section>
       </div>
 

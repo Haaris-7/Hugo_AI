@@ -1,6 +1,8 @@
+import json
+
 import pytest
-from argo.db import SessionLocal
-from argo.models import Campaign, CampaignStatus, CampaignStrategy
+from hugo.db import SessionLocal
+from hugo.models import Campaign, CampaignStatus, CampaignStrategy
 
 
 @pytest.mark.anyio
@@ -222,3 +224,21 @@ async def test_affiliate_strategy_uses_per_conversion_rate_and_creator_caps(clie
 async def test_public_creator_portal_is_not_exposed(client, api_headers):
     missing = await client.get("/public/deals/not-a-real-token")
     assert missing.status_code == 404
+
+
+def test_openapi_documents_api_and_agent_bearer_tokens() -> None:
+    from hugo.main import app
+
+    schema = app.openapi()
+    schemes = schema["components"]["securitySchemes"]
+    assert schemes["HugoApiToken"]["scheme"] == "bearer"
+    assert schemes["HermesAgentToken"]["scheme"] == "bearer"
+    assert schema["paths"]["/v1/campaigns"]["get"]["security"] == [{"HugoApiToken": []}]
+    assert schema["paths"]["/internal/agent/tasks"]["get"]["security"] == [
+        {"HermesAgentToken": []}
+    ]
+    serialized = json.dumps(schema).lower()
+    assert "ar" + "go" not in serialized
+    assert "nego" + "tiat" not in serialized
+    assert "/v1/deals/{deal_id}/response" in schema["paths"]
+    assert "/v1/deals/{deal_id}/creator-reply" not in schema["paths"]

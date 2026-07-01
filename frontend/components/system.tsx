@@ -2,8 +2,6 @@
 
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {
-  CheckCircle2,
-  CircleDashed,
   ListTodo,
   RefreshCw,
   RotateCcw,
@@ -72,38 +70,11 @@ const CAPABILITY_LABELS: Record<string, string> = {
   gmail: "Outreach email",
 };
 
-type AcceptanceProof = {
-  campaign_id: string;
-  passed: number;
-  total: number;
-  criteria: Array<{
-    id: number;
-    name: string;
-    passed: boolean;
-    evidence?: unknown;
-  }>;
-};
-
-function formatEvidence(evidence: unknown): string | null {
-  if (!evidence) return null;
-  if (typeof evidence === "string") return evidence;
-  try {
-    return JSON.stringify(evidence, null, 2);
-  } catch {
-    return String(evidence);
-  }
-}
-
 export function SystemScreen() {
   const query = useQuery<SystemStatus>({
     queryKey: ["system-status"],
     queryFn: () => api("/v1/system/status"),
     refetchInterval: 4_000,
-  });
-  const proof = useQuery<AcceptanceProof>({
-    queryKey: ["acceptance-proof"],
-    queryFn: () => api("/v1/system/acceptance-proof"),
-    retry: false,
   });
   const liveProbe = useMutation<LiveProbe>({
     mutationFn: () => api("/v1/system/live-probe", { method: "POST", body: "{}" }),
@@ -147,7 +118,6 @@ export function SystemScreen() {
               variant="secondary"
               onClick={() => {
                 query.refetch();
-                proof.refetch();
                 taskPreflight.refetch();
                 failedTasks.refetch();
               }}
@@ -171,7 +141,10 @@ export function SystemScreen() {
             >
               <strong>{service.name}</strong>
               <StatusBadge value={service.status} />
-              <p className="text-sm text-[#526360]">{service.detail}</p>
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-sm text-[#526360]">{service.detail}</p>
+                {["unavailable", "attention"].includes(service.status) && <Link href="/setup" className="shrink-0 text-sm font-semibold text-[#006e6e] hover:underline">Configure</Link>}
+              </div>
             </div>
           ))}
         </div>
@@ -284,7 +257,7 @@ export function SystemScreen() {
             ))}
           </div>
           {liveProbe.data && (
-            <div className="mt-4 grid gap-3">
+            <div className="mt-4 grid gap-3" aria-live="polite">
               {(["hermes", "vision", "stripe", "gmail"] as const).map((key) => {
                 const probe = liveProbe.data[key];
                 if (!probe) return null;
@@ -319,59 +292,10 @@ export function SystemScreen() {
             </div>
           )}
           {liveProbe.error && (
-            <p className="mt-3 text-sm text-[#b42318]">{apiErrorMessage(liveProbe.error)}</p>
+            <p role="alert" className="mt-3 text-sm text-[#b42318]">{apiErrorMessage(liveProbe.error)}</p>
           )}
         </section>
       )}
-
-      <section className="mt-12">
-        <div className="flex items-end justify-between gap-4">
-          <div>
-            <p className="text-sm font-medium text-[#526360]">
-              Acceptance proof
-            </p>
-            <h2 className="mt-1 text-lg font-semibold">Hackathon integration checklist</h2>
-          </div>
-          <div className="flex items-center gap-3">
-            {proof.data && (
-              <strong className="text-2xl tabular-nums">
-                {proof.data.passed}/{proof.data.total}
-              </strong>
-            )}
-          </div>
-        </div>
-        {proof.data ? (
-          <ol className="mt-5 overflow-hidden rounded-[10px] border border-[#dce4e3] bg-white">
-            {proof.data.criteria.map((criterion) => (
-              <li
-                key={criterion.id}
-                className="border-b border-[#dce4e3] px-4 py-3 last:border-b-0"
-              >
-                <div className="flex items-center gap-3">
-                  {criterion.passed ? (
-                    <CheckCircle2 className="h-4 w-4 shrink-0 text-[#167a5b]" />
-                  ) : (
-                    <CircleDashed className="h-4 w-4 shrink-0 text-[#986200]" />
-                  )}
-                  <span className="text-xs font-semibold tabular-nums text-[#687975]">
-                    {String(criterion.id).padStart(2, "0")}
-                  </span>
-                  <span className="text-sm">{criterion.name}</span>
-                </div>
-                {formatEvidence(criterion.evidence) && (
-                  <pre className="mt-2 overflow-x-auto rounded-[6px] bg-[#f5f7f7] p-3 text-xs text-[#354542]">
-                    {formatEvidence(criterion.evidence)}
-                  </pre>
-                )}
-              </li>
-            ))}
-          </ol>
-        ) : (
-          <p className="mt-5 rounded-[8px] border border-[#dce4e3] bg-white p-5 text-sm text-[#526360]">
-            Complete a campaign to populate the evidence-backed checklist.
-          </p>
-        )}
-      </section>
 
       <p className="mt-8 text-xs text-[#687975]">Environment: {titleCase(query.data.environment)} · all evidence is derived from completed live campaign state.</p>
     </>

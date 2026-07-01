@@ -1,0 +1,1 @@
+"""Hugo AI backend package."""

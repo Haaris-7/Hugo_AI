@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Plus, Search, SlidersHorizontal } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Search, SlidersHorizontal } from "lucide-react";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import type { CampaignSummary } from "@/lib/types";
@@ -10,22 +10,30 @@ import { apiErrorMessage, learningModeLabel, money, relativeTime } from "@/lib/u
 import { Button, EmptyState, ErrorState, LoadingState, PageHeader, StatusBadge } from "@/components/ui";
 
 const control = "h-11 rounded-[6px] border border-[#c5d1d0] bg-white px-3 outline-none transition-[border-color,box-shadow] focus:border-[#019393] focus:shadow-[0_0_0_3px_rgba(1,147,147,.12)]";
+const pageSize = 10;
 
 export function CampaignList() {
   const params = useSearchParams();
   const router = useRouter();
   const status = params.get("status") ?? "";
   const search = params.get("search") ?? "";
+  const requestedPage = Number(params.get("page") ?? "1");
+  const page = Number.isInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1;
   const query = useQuery<{ items: CampaignSummary[]; total: number }>({
-    queryKey: ["campaigns", status, search],
-    queryFn: () => api(`/v1/campaigns?status=${encodeURIComponent(status)}&search=${encodeURIComponent(search)}`),
+    queryKey: ["campaigns", status, search, page],
+    queryFn: () => api(`/v1/campaigns?status=${encodeURIComponent(status)}&search=${encodeURIComponent(search)}&offset=${(page - 1) * pageSize}&limit=${pageSize}`),
   });
   const update = (key: string, value: string) => {
     const next = new URLSearchParams(params.toString());
     value ? next.set(key, value) : next.delete(key);
+    if (key !== "page") next.delete("page");
+    if (key === "page" && value === "1") next.delete("page");
     router.replace(`/campaigns?${next.toString()}`);
   };
-
+  const total = query.data?.total ?? 0;
+  const pageCount = Math.max(1, Math.ceil(total / pageSize));
+  const rangeStart = total ? (page - 1) * pageSize + 1 : 0;
+  const rangeEnd = Math.min(page * pageSize, total);
   return (
     <>
       <PageHeader eyebrow="Portfolio" title="Campaigns" description="Every campaign, operating state, financial envelope, and learning policy." actions={<Link href="/campaigns/new"><Button><Plus className="h-4 w-4" />New campaign</Button></Link>} />
@@ -46,6 +54,7 @@ export function CampaignList() {
       {query.isLoading ? <LoadingState label="Loading campaigns" /> : query.error ? <ErrorState message={apiErrorMessage(query.error)} retry={() => query.refetch()} /> : !query.data?.items.length ? <EmptyState title="No campaigns match" detail="Clear the filters or create a new campaign." action={<Link href="/campaigns/new"><Button>New campaign</Button></Link>} /> : (
         <div className="table-scroll overflow-hidden rounded-[10px] border border-[#dce4e3] bg-white">
           <table className="w-full min-w-[900px] text-left">
+            <caption className="sr-only">Campaign portfolio with operating state, budget, results, learning policy, and last update.</caption>
             <thead className="bg-[#f5f7f7]"><tr className="text-xs font-semibold text-[#526360]"><th className="px-4 py-3">Campaign</th><th className="px-4 py-3">State</th><th className="px-4 py-3">Budget</th><th className="px-4 py-3">Results</th><th className="px-4 py-3">Learning policy</th><th className="px-4 py-3 text-right">Updated</th></tr></thead>
             <tbody>{query.data.items.map((campaign, index) => (
               <tr key={campaign.id} className="row-enter border-t border-[#dce4e3] hover:bg-[#f7f9f9]" style={{ animationDelay: `${index * 25}ms` }}>
@@ -70,6 +79,14 @@ export function CampaignList() {
           </table>
         </div>
       )}
+      {total > pageSize && <nav className="mt-4 flex items-center justify-between gap-4" aria-label="Campaign pagination">
+        <p className="text-sm text-[#526360]">Showing {rangeStart}–{rangeEnd} of {total}</p>
+        <div className="flex items-center gap-2">
+          <Button variant="secondary" disabled={page <= 1} onClick={() => update("page", String(page - 1))}><ChevronLeft className="h-4 w-4" aria-hidden />Previous</Button>
+          <span className="min-w-20 text-center text-sm tabular-nums">Page {page} of {pageCount}</span>
+          <Button variant="secondary" disabled={page >= pageCount} onClick={() => update("page", String(page + 1))}>Next<ChevronRight className="h-4 w-4" aria-hidden /></Button>
+        </div>
+      </nav>}
     </>
   );
 }

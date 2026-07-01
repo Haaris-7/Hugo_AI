@@ -1,0 +1,22 @@
+...................................F..........                           [100%]
+=================================== FAILURES ===================================
+___________________ test_removed_demo_routes_are_not_exposed ___________________
+
+client = <httpx.AsyncClient object at 0x7b9426ffee00>
+api_headers = {'Authorization': 'Bearer test-api-token'}
+
+    @pytest.mark.anyio
+    async def test_removed_demo_routes_are_not_exposed(client, api_headers):
+        assert (await client.post("/v1/demo/reset", json={}, headers=api_headers)).status_code == 404
+        assert (
+            await client.post("/v1/demo/acceptance-run", json={}, headers=api_headers)
+        ).status_code == 404
+        system = (await client.get("/v1/system/status", headers=api_headers)).json()
+>       assert system["demo_mode"] is False
+E       assert True is False
+
+backend/tests/test_operator_api.py:145: AssertionError
+=========================== short test summary info ============================
+FAILED backend/tests/test_operator_api.py::test_removed_demo_routes_are_not_exposed
+1 failed, 45 passed in 15.01s
+True

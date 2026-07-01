@@ -1,7 +1,7 @@
-"""Create the initial Argo schema."""
+"""Create the initial Hugo schema."""
 
-from argo import models  # noqa: F401
-from argo.db import Base
+from hugo import models  # noqa: F401
+from hugo.db import Base
 
 from alembic import op
 

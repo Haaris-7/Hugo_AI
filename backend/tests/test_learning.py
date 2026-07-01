@@ -1,9 +1,9 @@
 from types import SimpleNamespace
 
 import pytest
-from argo.db import SessionLocal
-from argo.models import Brand, Campaign, CampaignStatus, LearningRun
-from argo.services import process_learning
+from hugo.db import SessionLocal
+from hugo.models import Brand, Campaign, CampaignStatus, LearningRun
+from hugo.services import process_learning
 
 
 class FailingHermes:
@@ -84,7 +84,7 @@ async def test_hermes_commit_supports_evidence_bounded_no_op(client, agent_heade
             "summary": "The evidence is insufficient for a generalized skill change.",
             "change_type": "no_op",
             "no_op_reason": "Only one terminal run exists and it has no creator outcomes.",
-            "skill_name": "argo-strategy-engine",
+            "skill_name": "hugo-strategy-engine",
             "evidence_ids": [evidence_id],
             "governance": {"generator": "nvidia/skill-card-generator"},
         },

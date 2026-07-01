@@ -1,8 +1,8 @@
 from logging.config import fileConfig
 
-from argo import models  # noqa: F401
-from argo.config import get_settings
-from argo.db import Base
+from hugo import models  # noqa: F401
+from hugo.config import get_settings
+from hugo.db import Base
 from sqlalchemy import engine_from_config, pool
 
 from alembic import context

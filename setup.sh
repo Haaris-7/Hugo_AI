@@ -86,13 +86,13 @@ fi
 
 # Generate local service credentials before Compose reads .env. The setup
 # wizard never changes these, so the frontend proxy and backend stay in sync.
-if grep -q '^ARGO_API_TOKEN=change-me$' .env; then
+if grep -q '^HUGO_API_TOKEN=change-me$' .env; then
   token="$(openssl rand -hex 24)"
-  sed -i "s/^ARGO_API_TOKEN=change-me$/ARGO_API_TOKEN=${token}/" .env
+  sed -i "s/^HUGO_API_TOKEN=change-me$/HUGO_API_TOKEN=${token}/" .env
 fi
-if grep -q '^ARGO_AGENT_TOKEN=change-agent-token$' .env; then
+if grep -q '^HUGO_AGENT_TOKEN=change-agent-token$' .env; then
   token="$(openssl rand -hex 24)"
-  sed -i "s/^ARGO_AGENT_TOKEN=change-agent-token$/ARGO_AGENT_TOKEN=${token}/" .env
+  sed -i "s/^HUGO_AGENT_TOKEN=change-agent-token$/HUGO_AGENT_TOKEN=${token}/" .env
 fi
 
 # ── 3. Build and start ──────────────────────────────────────────────────────

@@ -26,7 +26,9 @@ def upgrade() -> None:
     campaign_columns = _columns("campaigns")
     with op.batch_alter_table("campaigns") as batch:
         additions = {
-            "compensation": sa.Column("compensation", sa.JSON(), server_default="{}", nullable=False),
+            "compensation": sa.Column(
+                "compensation", sa.JSON(), server_default="{}", nullable=False
+            ),
             "compensation_source": sa.Column(
                 "compensation_source", sa.String(30), server_default="legacy", nullable=False
             ),
@@ -35,9 +37,6 @@ def upgrade() -> None:
             ),
             "operation_mode": sa.Column(
                 "operation_mode", sa.String(50), server_default="strategy_creators", nullable=False
-            ),
-            "negotiation_policy": sa.Column(
-                "negotiation_policy", sa.JSON(), server_default="{}", nullable=False
             ),
             "measurement_window_hours": sa.Column(
                 "measurement_window_hours", sa.Integer(), server_default="72", nullable=False
@@ -51,30 +50,23 @@ def upgrade() -> None:
     deal_columns = _columns("deals")
     with op.batch_alter_table("deals") as batch:
         additions = {
-            "compensation": sa.Column("compensation", sa.JSON(), server_default="{}", nullable=False),
+            "compensation": sa.Column(
+                "compensation", sa.JSON(), server_default="{}", nullable=False
+            ),
             "draft_approved": sa.Column(
                 "draft_approved", sa.Boolean(), server_default=sa.false(), nullable=False
             ),
             "final_approved": sa.Column(
                 "final_approved", sa.Boolean(), server_default=sa.false(), nullable=False
             ),
-            "negotiation_pushes": sa.Column(
-                "negotiation_pushes", sa.Integer(), server_default="0", nullable=False
-            ),
-            "negotiation_escalation_status": sa.Column(
-                "negotiation_escalation_status",
-                sa.String(30),
-                server_default="none",
-                nullable=False,
-            ),
-            "negotiation_requested_rate_cents": sa.Column(
-                "negotiation_requested_rate_cents", sa.Integer(), nullable=True
-            ),
             "replacement_attempt": sa.Column(
                 "replacement_attempt", sa.Integer(), server_default="0", nullable=False
             ),
             "replacement_for_id": sa.Column(
-                "replacement_for_id", sa.String(36), sa.ForeignKey("deals.id"), nullable=True
+                "replacement_for_id",
+                sa.String(36),
+                sa.ForeignKey("deals.id", name="fk_deals_replacement_for_id_deals"),
+                nullable=True,
             ),
         }
         for name, column in additions.items():

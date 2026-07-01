@@ -1,0 +1,14 @@
+name: hugo-ops
+version: 0.2.0
+entry_point: __init__:register
+toolset: hugo_ops
+description: >-
+  Policy-enforced business operations for Hugo campaigns.
+  Includes campaign lifecycle (strategy, funding, launch),
+  creator management (discovery, fixed offers, outreach responses),
+  content QA, payouts, learning, email polling, operator
+  notifications, browser-driven Gmail/Outlook delivery, and Hermes cron task orchestration
+  (preflight, claim, complete, fail).
+requires_env:
+  - HUGO_INTERNAL_API_URL
+  - HUGO_AGENT_TOKEN

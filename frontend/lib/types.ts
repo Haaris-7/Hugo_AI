@@ -21,12 +21,6 @@ export type CampaignSummary = {
   compensation_source: string;
   compensation_locked: boolean;
   operation_mode: OperationMode;
-  negotiation_policy: {
-    escalation_enabled?: boolean;
-    max_escalation_percent?: number;
-    persuasion_attempts?: number;
-    replacement_limit?: number;
-  };
   measurement_window_hours: number;
   learning_mode: LearningMode;
   status: string;
@@ -42,7 +36,7 @@ export type CampaignSummary = {
 
 export type ActionItem = {
   id: string;
-  type: "strategy" | "deal" | "service_spend" | "payout" | "negotiation_adjustment";
+  type: "strategy" | "deal" | "service_spend" | "payout";
   campaign_id: string;
   campaign_name: string;
   title: string;
@@ -99,8 +93,8 @@ export type LearningRun = {
     strategy_prior?: {
       niche: string;
       creator_tier: string;
-      before: Record<string, number>;
-      after: Record<string, number>;
+      before?: Record<string, number>;
+      after?: Record<string, number>;
     };
     creator_reputations?: Array<{
       creator_id: string;
@@ -206,8 +200,6 @@ export type Deal = {
   compensation: { pricing_mode?: string; components: CompensationComponent[] };
   draft_approved: boolean;
   final_approved: boolean;
-  negotiation_pushes: number;
-  negotiation_escalation_status: string;
   replacement_attempt: number;
   messages: Array<{
     id: string;

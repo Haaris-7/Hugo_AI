@@ -2,7 +2,7 @@ import { ApiError } from "@/lib/utils";
 import { withBasePath } from "@/lib/base-path";
 
 export async function api<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(withBasePath(`/api/argo${path}`), {
+  const response = await fetch(withBasePath(`/api/hugo${path}`), {
     ...init,
     headers: {
       "Content-Type": "application/json",

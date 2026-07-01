@@ -84,15 +84,15 @@ async def test_complete_campaign_runs_automatic_learning(client, api_headers, ag
         {"proposed_rate_cents": 15_000},
         api_headers,
     )
-    negotiation = await _post(
+    response = await _post(
         client,
-        f"/v1/deals/{deal['id']}/creator-reply",
-        {"body": "I can do this for $140.00.", "external_id": "gmail_reply_1"},
+        f"/v1/deals/{deal['id']}/response",
+        {"body": "ACCEPT", "external_id": "gmail_reply_1"},
         api_headers,
     )
-    assert negotiation["intent"] == "accept"
-    assert negotiation["agreed_rate_cents"] == 14_000
-    assert negotiation["status"] == "contracted"
+    assert response["intent"] == "accept"
+    assert response["agreed_rate_cents"] == 15_000
+    assert response["status"] == "contracted"
 
     connect = await _post(
         client,
@@ -122,7 +122,7 @@ async def test_complete_campaign_runs_automatic_learning(client, api_headers, ag
         client,
         f"/v1/deals/{deal['id']}/deliverables",
         {
-            "caption": "Sponsored #ad — learn more at argo.link/summer",
+            "caption": "Sponsored #ad — learn more at hugo.link/summer",
             "media_url": "https://media.test/good.jpg",
             "post_url": "https://tiktok.com/@creator/video/1",
             "stage": "draft",
@@ -134,7 +134,7 @@ async def test_complete_campaign_runs_automatic_learning(client, api_headers, ag
         client,
         f"/v1/deals/{deal['id']}/deliverables",
         {
-            "caption": "Sponsored #ad — learn more at argo.link/summer",
+            "caption": "Sponsored #ad — learn more at hugo.link/summer",
             "media_url": "https://media.test/good.jpg",
             "post_url": "https://tiktok.com/@creator/video/1",
             "stage": "final",
@@ -187,14 +187,6 @@ async def test_complete_campaign_runs_automatic_learning(client, api_headers, ag
     )
     assert next_strategy["skill_version"] == 1
     assert "Database prior: 1 observed" in next_strategy["rationale"]
-
-    proof = (
-        await client.get(
-            f"/v1/system/acceptance-proof?campaign_id={campaign['id']}", headers=api_headers
-        )
-    ).json()
-    assert proof["passed"] == proof["total"]
-
 
 @pytest.mark.anyio
 async def test_webhook_is_idempotent(client, api_headers):

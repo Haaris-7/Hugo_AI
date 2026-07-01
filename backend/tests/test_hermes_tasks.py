@@ -4,11 +4,9 @@ from datetime import timedelta
 
 import pytest
 from fastapi import HTTPException
-from sqlalchemy import select
-
-from argo.config import get_settings
-from argo.db import SessionLocal
-from argo.models import (
+from hugo.config import get_settings
+from hugo.db import SessionLocal
+from hugo.models import (
     Brand,
     Campaign,
     CampaignStatus,
@@ -21,9 +19,9 @@ from argo.models import (
     HermesTask,
     utcnow,
 )
-from argo.providers import build_providers
-from argo.schemas import CampaignCreate
-from argo.services import (
+from hugo.providers import build_providers
+from hugo.schemas import CampaignCreate
+from hugo.services import (
     claim_hermes_tasks,
     complete_hermes_task,
     create_campaign,
@@ -32,6 +30,7 @@ from argo.services import (
     mark_funded,
     retry_hermes_task,
 )
+from sqlalchemy import select
 
 
 def _active_campaign(db) -> Campaign:

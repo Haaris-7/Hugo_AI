@@ -107,6 +107,7 @@ export function OverviewScreen() {
         {data.campaigns.length ? (
           <div className="table-scroll overflow-hidden rounded-[10px] border border-[#dce4e3] bg-white">
             <table className="w-full min-w-[760px] border-collapse text-left">
+              <caption className="sr-only">Campaigns currently in motion with operating state, budget, learning policy, and last update.</caption>
               <thead className="bg-[#f5f7f7]"><tr className="text-xs font-semibold text-[#526360]"><th className="px-4 py-3">Campaign</th><th className="px-4 py-3">State</th><th className="px-4 py-3">Budget</th><th className="px-4 py-3">Learning</th><th className="px-4 py-3 text-right">Updated</th></tr></thead>
               <tbody>{data.campaigns.map((campaign, index) => (
                 <tr key={campaign.id} className="row-enter border-t border-[#dce4e3] hover:bg-[#f7f9f9]" style={{ animationDelay: `${index * 25}ms` }}>
