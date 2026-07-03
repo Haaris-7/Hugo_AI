@@ -13,12 +13,10 @@ transitions, and financial policy.
 
 The system is designed around three autonomous capabilities:
 
-**Agent earns** — Hermes sends approved fixed-price creator offers, records acceptance,
-and closes contracts via email without human intervention.
-
 **Agent spends** — The Stripe Link skill lets the agent purchase service credits (discovery
 API) with operator approval gates. Stripe Checkout funds campaigns; Connect transfers pay
-creators.
+creators. Hermes sends approved fixed-price creator offers, records acceptance,
+and closes contracts via email without human intervention.
 
 **Agent runs operations at scale** — A durable task queue with lease-based claiming lets
 Hermes process strategy, discovery, outreach, QA, payouts, and learning across unlimited
