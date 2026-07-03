@@ -28,6 +28,58 @@ campaigns. Each completed campaign improves future strategy through PostgreSQL p
 access Stripe keys, Gmail tokens, or arbitrary endpoints. Every financial action flows
 through the policy-enforced FastAPI broker.
 
+## How it works
+
+### System architecture
+
+Hermes agents run inside the NemoClaw sandbox and drive campaigns by calling the Hugo
+backend. The operator interacts only with the Next.js dashboard; all external side effects
+(Stripe, Gmail, NVIDIA) are brokered by the policy-enforced FastAPI control plane and its
+background worker.
+
+![Hugo system architecture: Hermes agent, operator dashboard, Hugo backend, and external services](flowcharts/architecture.png)
+
+### Campaign lifecycle
+
+An operator creates a campaign in the cockpit and funds it; from there Hermes runs the
+entire lifecycle end to end. The minute cron orchestrates each autonomous step.
+
+![Campaign lifecycle from creation and funding through payout and learning, orchestrated by the Hermes minute cron](flowcharts/campaign_lifecycle.png)
+
+### Durable task queue
+
+Every lifecycle step is a durable task. The minute cron claims pending tasks under a lease,
+dispatches them to the right skill, and records results with evidence. Failures retry with
+backoff and fall through to a dead-letter alert; expired leases auto-revert to pending so no
+work is lost if a worker dies mid-task.
+
+![Durable task queue: minute cron claims leased tasks, dispatches to skills, records results, retries failures, and dead-letters](flowcharts/task_queue.png)
+
+### Money flows
+
+Three independent money paths are all brokered through Stripe. Operators fund campaigns via
+Checkout; verified creator deals pay out through Connect into an immutable ledger; and Hermes
+buys discovery credits through Stripe Link behind an operator-approval gate.
+
+![Money flows: campaign funding via Checkout, creator payouts via Connect, and discovery credits via Stripe Link](flowcharts/money_flows.png)
+
+### Learning loop
+
+Each completed campaign records its metrics and runs a learning pass that updates the
+`StrategyPrior` table (keyed by niche × tier). The next campaign in the same niche/tier reads
+those priors as a better starting point, so results compound over time.
+
+![Learning loop: each campaign records metrics and updates StrategyPrior so future campaigns start smarter](flowcharts/learning_loop.png)
+
+### NemoClaw security
+
+The NemoClaw network policy (`argo-backend-policy.yaml`) enforces least-privilege egress.
+Hermes can only reach three hosts — the Hugo API, NVIDIA inference, and the Stripe Link CLI.
+Stripe secret keys, Gmail OAuth tokens, discovery API keys, and the open internet are never
+reachable from inside the agent sandbox.
+
+![NemoClaw security: least-privilege egress policy allowing only three hosts and blocking secrets and the open internet](flowcharts/nemoclaw.png)
+
 ## Tech stack
 
 | Layer | Technology |
