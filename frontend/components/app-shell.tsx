@@ -40,7 +40,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const drawerRef = useRef<HTMLElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
   const { data, isLoading } = useQuery<{ services: Array<{ status: string }> }>({
-    queryKey: ["system-status-shell"],
+    queryKey: ["system-status"],
     queryFn: () => api("/v1/system/status"),
     refetchInterval: 5_000,
   });

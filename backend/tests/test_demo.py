@@ -1,3 +1,4 @@
+import pytest
 from hugo.config import Settings
 from hugo.db import SessionLocal
 from hugo.demo import seed_demo_data
@@ -17,7 +18,6 @@ from hugo.models import (
 )
 from hugo.providers import build_providers
 from hugo.services import confirm_browser_email, generate_strategy, send_outreach
-import pytest
 from sqlalchemy import select
 
 

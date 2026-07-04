@@ -26,7 +26,9 @@ WIZARD_FIELDS: list[Field] = [
     Field("HUGO_DEMO_MODE", "Seed demo campaigns", "false"),
     Field("HUGO_DEMO_REAL_PROVIDERS", "Use real providers in demo", ""),
     Field("HUGO_NVIDIA_BUILD_API_KEY", "NVIDIA Build API key (demo content)", secret=True),
-    Field("HUGO_NVIDIA_BUILD_MODEL", "NVIDIA Build model", "nvidia/llama-3.3-nemotron-super-49b-v1"),
+    Field(
+        "HUGO_NVIDIA_BUILD_MODEL", "NVIDIA Build model", "nvidia/llama-3.3-nemotron-super-49b-v1"
+    ),
     Field("HUGO_HERMES_API_KEY", "Hermes API key", secret=True),
     Field("HUGO_NVIDIA_API_KEY", "NVIDIA NIM API key", secret=True),
     Field("HUGO_NVIDIA_VISION_MODEL", "NIM vision model", "nvidia/nemotron-nano-12b-v2-vl"),

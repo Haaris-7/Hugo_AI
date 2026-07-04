@@ -19,6 +19,9 @@ os.environ.update(
         "HUGO_STRIPE_WEBHOOK_SECRET": "whsec_test_local",
         "HUGO_GMAIL_ACCESS_TOKEN": "test-gmail-token",
         "HUGO_GMAIL_SENDER": "operator@example.test",
+        # Pin transport/discovery so the suite never inherits the developer's .env.
+        "HUGO_EMAIL_TRANSPORT": "gmail_api",
+        "HUGO_DISCOVERY_MODE": "hermes_agents",
     }
 )
 

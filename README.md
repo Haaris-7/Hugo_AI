@@ -71,7 +71,7 @@ those priors as a better starting point, so results compound over time.
 
 ### NemoClaw security
 
-The NemoClaw network policy (`argo-backend-policy.yaml`) enforces least-privilege egress.
+The NemoClaw network policy (`hugo-backend-policy.yaml`) enforces least-privilege egress.
 Hermes can only reach three hosts — the Hugo API, NVIDIA inference, and the Stripe Link CLI.
 Stripe secret keys, Gmail OAuth tokens, discovery API keys, and the open internet are never
 reachable from inside the agent sandbox.

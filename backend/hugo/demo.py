@@ -351,7 +351,19 @@ def seed_demo_data(db: Session) -> dict[str, int]:
             False,
         ),
     ]
-    for creator, fit_score, thread_key, offer_body, accept_body, caption, media_url, post_url, transfer_id, idempotency_key, include_failed_draft_qa in summer_deals:
+    for (
+        creator,
+        fit_score,
+        thread_key,
+        offer_body,
+        accept_body,
+        caption,
+        media_url,
+        post_url,
+        transfer_id,
+        idempotency_key,
+        include_failed_draft_qa,
+    ) in summer_deals:
         _seed_transferred_deal(
             db,
             campaign=completed,
